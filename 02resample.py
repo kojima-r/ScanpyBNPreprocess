@@ -3,8 +3,10 @@ import numpy as np
 import os
 
 N=10
-os.makedirs("02data_bbknn/",exist_ok=True)
+out_dir="02data_bbknn/"
+input_files="01data_bbknn/*.txt"
 
+os.makedirs(out_dir,exist_ok=True)
 
 def run(filename):
     print(filename)
@@ -20,7 +22,7 @@ def run(filename):
         data=np.array(data)
     
     name=os.path.basename(filename)
-    out_name="02data_bbknn/"+name
+    out_name=out_dir+name
     print(">>",out_name)
     with open(out_name,"w") as ofp:
         ofp.write(head)
@@ -34,12 +36,10 @@ def run(filename):
             s="\t".join(map(str,v))
             ofp.write("s"+str(i)+"\t"+s)
             ofp.write("\n")
-            #new_data.append(v)
-        #print(np.array(new_data).shape)
 
 from multiprocessing import Pool
 
-f_list=[filename for filename in glob.glob("01data_bbknn/*.txt")]
+f_list=[filename for filename in glob.glob(input_files)]
 p = Pool(16)
 p.map(run,f_list)
 

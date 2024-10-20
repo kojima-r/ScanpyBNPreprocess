@@ -2,12 +2,15 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 import os
-
-results_file = 'tabula-muris-senis-bbknn-processed-official-annotations.h5ad'
-
+if True:
+    results_file = 'tabula-muris-senis-bbknn-processed-official-annotations.h5ad'
+    out_dir="01data_bbknn/"
+else:
+    results_file = 'tabula-muris-senis-facs-processed-official-annotations.h5ad'
+    out_dir="01data_facs/"
 
 adata = sc.read(results_file)
-os.makedirs("01data_bbknn/",exist_ok=True)
+os.makedirs(out_dir,exist_ok=True)
 
 print(len(adata.obs["tissue"].unique().tolist()))
 for tissue in adata.obs["tissue"].unique().tolist():
@@ -15,7 +18,7 @@ for tissue in adata.obs["tissue"].unique().tolist():
     a=Z.X.todense()
     obs=(Z.obs["tissue"].astype(str)+"|"+Z.obs["age"].astype(str)+"|"+Z.obs.index.astype(str)).tolist()
     col=Z.var.index.tolist()
-    with open("01data_bbknn/"+tissue+".txt","w") as fp:
+    with open(out_dir+tissue+".txt","w") as fp:
         h="@name\t"+"\t".join(col)
         fp.write(h)
         fp.write("\n")
