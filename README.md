@@ -8,15 +8,23 @@
 
 
 ### 02. resample/pseudo_bulk
+
 出力
+
 - `02data_bbknn/` resample
 - `02data_bbknn2/` pseudo_bulk
+  
 ### 03. transpose
+
 出力
+
 -`02data_bbknn_t/`
 -`02data_bbknn2_t/`
+
 ### 04. merge
+
 出力
+
 - `03data_bbknn/all.txt`
 - `03data_bbknn/all2.txt`
 
