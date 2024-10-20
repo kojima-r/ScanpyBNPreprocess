@@ -18,8 +18,8 @@
 
 出力
 
--`02data_bbknn_t/`
--`02data_bbknn2_t/`
+- `02data_bbknn_t/`
+- `02data_bbknn2_t/`
 
 ### 04. merge
 
