@@ -3,10 +3,10 @@ import pandas as pd
 import scanpy as sc
 import os
 if True:
-    results_file = 'tabula-muris-senis-bbknn-processed-official-annotations.h5ad'
+    results_file = 'data/tabula-muris-senis-bbknn-processed-official-annotations.h5ad'
     out_dir="01data_bbknn/"
 else:
-    results_file = 'tabula-muris-senis-facs-processed-official-annotations.h5ad'
+    results_file = 'data/tabula-muris-senis-facs-processed-official-annotations.h5ad'
     out_dir="01data_facs/"
 
 adata = sc.read(results_file)

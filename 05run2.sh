@@ -3,7 +3,7 @@
 data=all2
 path=03data_bbknn
 
-mkdir -p bs_all2
+mkdir -p bs_${all2}
 
 ingor -B 1  -N 100 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
 ingor -B 2  -N 100 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &

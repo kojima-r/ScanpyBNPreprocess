@@ -5,6 +5,10 @@ import os
 N=10
 out_dir="02data_bbknn/"
 input_files="01data_bbknn/*.txt"
+#Sample the same number of times as the original sample size.
+M="same" #resample 
+#Sample only the root of the original sample size.
+# M="root"
 
 os.makedirs(out_dir,exist_ok=True)
 
@@ -26,8 +30,10 @@ def run(filename):
     print(">>",out_name)
     with open(out_name,"w") as ofp:
         ofp.write(head)
-        #m=int(np.sqrt(len(id_list)))
-        m=len(id_list)
+        if M=="root":
+            m=int(np.sqrt(len(id_list)))
+        else: # M=="same"
+            m=len(id_list)
         new_data=[]
         for i in range(N):
             idx=np.random.randint(0,len(id_list),size=m)
