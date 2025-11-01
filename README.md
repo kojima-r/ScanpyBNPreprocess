@@ -4,6 +4,8 @@
 https://figshare.com/ndownloader/files/23936555
 
 ```
+mkdir data
+
 wget --content-disposition https://ndownloader.figshare.com/files/23936555 -O data/tabula-muris-senis-bbknn-processed-official-annotations.h5ad
 
 wget --content-disposition https://ndownloader.figshare.com/files/23937842 -O data/tabula-muris-senis-facs-processed-official-annotations.h5ad
@@ -11,9 +13,9 @@ wget --content-disposition https://ndownloader.figshare.com/files/23937842 -O da
 ```
 #### 01. Preprocess
 以下のデータを読み込み
-`tabula-muris-senis-bbknn-processed-official-annotations.h5ad`
+`data/tabula-muris-senis-bbknn-processed-official-annotations.h5ad`
 別データを使う場合はソースコード内を書き換えて以下を使用するようにする
-`tabula-muris-senis-facs-processed-official-annotations.h5ad`
+`data/tabula-muris-senis-facs-processed-official-annotations.h5ad`
 
 ##### Notebook
 `preprocess_facs.ipynb`

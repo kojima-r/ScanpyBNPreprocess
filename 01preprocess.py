@@ -2,9 +2,13 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 import os
-if True:
+mode="bbknn"
+if mode=="bbknn":
     results_file = 'data/tabula-muris-senis-bbknn-processed-official-annotations.h5ad'
     out_dir="01data_bbknn/"
+elif mode=="droplet":
+    results_file = 'data/tabula-muris-senis-droplet-processed-official-annotations.h5ad'
+    out_dir="01data_droplet/"
 else:
     results_file = 'data/tabula-muris-senis-facs-processed-official-annotations.h5ad'
     out_dir="01data_facs/"
@@ -16,7 +20,10 @@ print(len(adata.obs["tissue"].unique().tolist()))
 for tissue in adata.obs["tissue"].unique().tolist():
     Z=adata[adata.obs["tissue"]==tissue, adata.var["highly_variable"]==True ]
     a=Z.X.todense()
-    obs=(Z.obs["tissue"].astype(str)+"|"+Z.obs["age"].astype(str)+"|"+Z.obs.index.astype(str)).tolist()
+    if mode=="bbknn":
+        obs=(Z.obs["tissue"].astype(str)+"|"+Z.obs["age"].astype(str)+"|"+Z.obs["batch"].astype(str)+"|"+Z.obs.index.astype(str)).tolist()
+    else:
+        obs=(Z.obs["tissue"].astype(str)+"|"+Z.obs["age"].astype(str)+"|"+Z.obs.index.astype(str)).tolist()
     col=Z.var.index.tolist()
     with open(out_dir+tissue+".txt","w") as fp:
         h="@name\t"+"\t".join(col)

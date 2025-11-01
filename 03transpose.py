@@ -16,9 +16,9 @@ def run(out_dir,input_files):
 
 out_dir="02data_bbknn_t/"
 input_files="02data_bbknn/*.txt"
-run(out_dir,input_files):
+run(out_dir,input_files)
 
 out_dir="02data_bbknn2_t/"
 input_files="02data_bbknn2/*.txt"
-run(out_dir,input_files):
+run(out_dir,input_files)
 
