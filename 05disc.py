@@ -68,10 +68,11 @@ print(cols_to_drop_transformed)
 
 # Drop the identified columns
 df_transformed_filtered = df_transformed.drop(columns=cols_to_drop_transformed)
-
+df_transformed_filtered["tissue"]=df["tissue"]
 
 df_transformed_filtered['@name'] = df_transformed_filtered['@name'].apply(lambda x: '|'.join([x.split('|')[0], f'{int(x.split("|")[1][:-1]):02d}{x.split("|")[1][-1]}', x.split('|')[2]]))
 
+# sort
 df_transformed_filtered = df_transformed_filtered.sort_values(by="@name")
 
 

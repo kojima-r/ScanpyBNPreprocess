@@ -1,4 +1,10 @@
 # ScanpyBNPreprocess
+Tabula Muris Senis データセットには、マウス全身のシングルセルRNA発現量データが含まれている。より具体的には、以下の２種類のデータ取得方法によるデータセットとそれらを統合し、前処理したデータセットが含まれている。
+- 1：FACS（Fluorescence-Activated Cell Sorting）方式によるシングルセルRNA-seq
+- 2：ドロップレット方式によるシングルセルRNA-seq
+- 3：Batch Balanced k-Nearest Neighbors の略で、FACS と droplet の両データを統合した後、バッチ効果補正を行った統合データ（bbknn）
+
+
 
 以下からデータのダウンロード:
 https://figshare.com/ndownloader/files/23936555
