@@ -9,6 +9,14 @@ Two layouts are supported:
   the originating tissue is preserved.
 * --batched: matrices are joined row-wise. A "tissue" column is
   added to record the originating file.
+
+Default I/O is derived from --source / --level so the directory
+naming stays consistent with steps 02 and 03:
+
+  default:    02data_bbknn_<source>_<level>_t/   →  03data_bbknn_<source>_<level>/all.txt
+  --batched:  02data_bbknn_<source>_<level>/     →  03data_bbknn_b_<source>_<level>/all.txt
+
+Pass --input-glob / --out to override.
 """
 
 import argparse
@@ -16,6 +24,10 @@ import glob
 import os
 
 import pandas as pd
+
+
+SOURCES = ("r", "p")
+LEVELS = ("tissue", "age", "batch")
 
 
 def merge_columns(input_glob, out_path):
@@ -46,26 +58,37 @@ def merge_rows(input_glob, out_path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input-glob", default=None,
-                        help="Glob pattern for input files")
-    parser.add_argument("--out", default=None,
-                        help="Output file path")
+    parser.add_argument("--source", choices=SOURCES,
+                        help="r=resample, p=pseudo_bulk (default-path generation)")
+    parser.add_argument("--level", choices=LEVELS,
+                        help="Stratification level used in step 02")
     parser.add_argument("--batched", action="store_true",
                         help="Stack rows (with a 'tissue' column) instead of columns")
+    parser.add_argument("--input-glob", default=None,
+                        help="Override: glob pattern for input files")
+    parser.add_argument("--out", default=None,
+                        help="Override: output file path")
     args = parser.parse_args()
+
+    fn = merge_rows if args.batched else merge_columns
 
     if args.input_glob and args.out:
         os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
-        (merge_rows if args.batched else merge_columns)(args.input_glob, args.out)
+        fn(args.input_glob, args.out)
         return
 
+    if not (args.source and args.level):
+        parser.error("either (--source AND --level) or (--input-glob AND --out) is required")
+
     if args.batched:
-        os.makedirs("03data_bbknn_b/", exist_ok=True)
-        merge_rows("02data_bbknn_b/*.txt", "03data_bbknn_b/all.txt")
+        in_glob = args.input_glob or f"02data_bbknn_{args.source}_{args.level}/*.txt"
+        out    = args.out        or f"03data_bbknn_b_{args.source}_{args.level}/all.txt"
     else:
-        os.makedirs("03data_bbknn/", exist_ok=True)
-        merge_columns("02data_bbknn_t/*.txt",  "03data_bbknn/all.txt")
-        merge_columns("02data_bbknn2_t/*.txt", "03data_bbknn/all2.txt")
+        in_glob = args.input_glob or f"02data_bbknn_{args.source}_{args.level}_t/*.txt"
+        out    = args.out        or f"03data_bbknn_{args.source}_{args.level}/all.txt"
+
+    os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
+    fn(in_glob, out)
 
 
 if __name__ == "__main__":

@@ -53,18 +53,31 @@ def prep(input_path, out_dir, suffix=""):
         print(f">> {path}")
 
 
+SOURCES = ("r", "p")
+LEVELS = ("tissue", "age", "batch")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--bin-input", default="03data_bbknn_b/all_disc.txt",
-                        help="Binary discretized merged matrix from 05disc.py")
-    parser.add_argument("--tri-input", default="03data_bbknn_b/all_disc_tri.txt",
-                        help="Ternary discretized merged matrix from 05disc.py")
-    parser.add_argument("--out-dir", default="03data_bbknn_b/",
-                        help="Where to write the subsetted .tsv files")
+    parser.add_argument("--source", choices=SOURCES, default="r",
+                        help="r=resample, p=pseudo_bulk (default-path generation)")
+    parser.add_argument("--level", choices=LEVELS, default="batch",
+                        help="Stratification level used in step 02 (default: batch)")
+    parser.add_argument("--bin-input", default=None,
+                        help="Override: binary discretized merged matrix from 05disc.py")
+    parser.add_argument("--tri-input", default=None,
+                        help="Override: ternary discretized merged matrix from 05disc.py")
+    parser.add_argument("--out-dir", default=None,
+                        help="Override: where to write the subsetted .tsv files")
     args = parser.parse_args()
 
-    prep(args.bin_input, args.out_dir, suffix="")
-    prep(args.tri_input, args.out_dir, suffix="_tri")
+    base = f"03data_bbknn_b_{args.source}_{args.level}"
+    bin_in  = args.bin_input or f"{base}/all_disc.txt"
+    tri_in  = args.tri_input or f"{base}/all_disc_tri.txt"
+    out_dir = args.out_dir   or f"{base}/"
+
+    prep(bin_in, out_dir, suffix="")
+    prep(tri_in, out_dir, suffix="_tri")
 
 
 if __name__ == "__main__":

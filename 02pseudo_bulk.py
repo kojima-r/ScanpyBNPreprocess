@@ -1,9 +1,17 @@
 """
-Collapse each per-tissue expression matrix into a single
-pseudo-bulk row (the mean over all cells).
+Collapse each per-tissue expression matrix into pseudo-bulk rows by
+averaging cells that share a prefix of the "@name" identifier.
 
-One output file is written per input file, with a single sample
-named "s<basename>".
+The cell identifier in the input is "tissue|age|batch|cell_id" (or
+"tissue|age|cell_id" for FACS / droplet). --level controls which
+prefix is used as the group key:
+
+  --level tissue  -> "<tissue>"            (1 row per file)
+  --level age     -> "<tissue>|<age>"      (1 row per (tissue, age))
+  --level batch   -> "<tissue>|<age>|<batch>"  (1 row per (tissue, age, batch))
+
+The first column of the output is the group key itself. The default
+output directory is 02data_bbknn_p_<level>/.
 """
 
 import argparse
@@ -15,41 +23,58 @@ from multiprocessing import Pool
 import numpy as np
 
 
-def pseudo_bulk(in_path, out_path):
+LEVEL_DEPTH = {"tissue": 1, "age": 2, "batch": 3}
+
+
+def pseudo_bulk(in_path, out_path, level):
+    depth = LEVEL_DEPTH[level]
+
+    counts: dict[str, int] = {}
+    sums: dict[str, np.ndarray] = {}
+
     with open(in_path) as fp:
         header = next(fp)
-        rows = []
         for line in fp:
-            arr = line.split("\t")
-            rows.append(np.array(list(map(float, arr[1:]))))
-    data = np.array(rows)
-    name = os.path.basename(in_path)
-    v = np.mean(data, axis=0)
+            arr = line.rstrip("\n").split("\t")
+            key = "|".join(arr[0].split("|")[:depth])
+            v = np.fromiter((float(x) for x in arr[1:]), dtype=np.float64)
+            if key in sums:
+                sums[key] += v
+                counts[key] += 1
+            else:
+                sums[key] = v.copy()
+                counts[key] = 1
+
     with open(out_path, "w") as ofp:
         ofp.write(header)
-        ofp.write(f"s{name}\t" + "\t".join(map(str, v)) + "\n")
+        for key in sorted(sums.keys()):
+            mean = sums[key] / counts[key]
+            ofp.write(f"{key}\t" + "\t".join(map(str, mean)) + "\n")
 
 
-def _worker(in_path, out_dir):
+def _worker(in_path, out_dir, level):
     out_path = os.path.join(out_dir, os.path.basename(in_path))
     print(f"{in_path} >> {out_path}")
-    pseudo_bulk(in_path, out_path)
+    pseudo_bulk(in_path, out_path, level)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input-glob", default="01data_bbknn/*.txt",
                         help="Glob pattern for input per-tissue files")
-    parser.add_argument("--out-dir", default="02data_bbknn2/",
-                        help="Output directory")
+    parser.add_argument("--level", choices=list(LEVEL_DEPTH), default="tissue",
+                        help="Aggregation level: tissue / age / batch (default: tissue)")
+    parser.add_argument("--out-dir", default=None,
+                        help="Output directory (default: 02data_bbknn_p_<level>/)")
     parser.add_argument("--workers", type=int, default=16,
                         help="Process-pool size")
     args = parser.parse_args()
 
-    os.makedirs(args.out_dir, exist_ok=True)
+    out_dir = args.out_dir or f"02data_bbknn_p_{args.level}/"
+    os.makedirs(out_dir, exist_ok=True)
     files = sorted(glob.glob(args.input_glob))
     with Pool(args.workers) as pool:
-        pool.map(partial(_worker, out_dir=args.out_dir), files)
+        pool.map(partial(_worker, out_dir=out_dir, level=args.level), files)
 
 
 if __name__ == "__main__":

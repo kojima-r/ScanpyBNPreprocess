@@ -47,9 +47,18 @@ def to_binary(df_tri):
 
 
 def _pad_age(name):
-    """tissue|<age><suffix>|cell  →  tissue|<0-padded age><suffix>|cell."""
-    a, b, c = name.split("|")
-    return f"{a}|{int(b[:-1]):02d}{b[-1]}|{c}"
+    """Zero-pad the first '<n>m' / '<n>d' age token in a '|'-joined name.
+
+    Works for any number of parts, so it accepts both the legacy
+    "s<i>|<age>|<batch>" form and the aligned
+    "s<i>|<tissue>|<age>|<batch>" form emitted by 02resample.py.
+    """
+    parts = name.split("|")
+    for i, p in enumerate(parts):
+        if len(p) >= 2 and p[-1] in ("m", "d") and p[:-1].isdigit():
+            parts[i] = f"{int(p[:-1]):02d}{p[-1]}"
+            break
+    return "|".join(parts)
 
 
 def postprocess(df, tissue_col):
@@ -62,16 +71,28 @@ def postprocess(df, tissue_col):
     return df.sort_values(by="@name")
 
 
+SOURCES = ("r", "p")
+LEVELS = ("tissue", "age", "batch")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", default="03data_bbknn_b/all.txt",
-                        help="Merged batched matrix from 04merge.py --batched")
-    parser.add_argument("--out-dir", default="03data_bbknn_b/",
-                        help="Where to write *_disc.txt outputs")
+    parser.add_argument("--source", choices=SOURCES, default="r",
+                        help="r=resample, p=pseudo_bulk (default-path generation)")
+    parser.add_argument("--level", choices=LEVELS, default="batch",
+                        help="Stratification level used in step 02 (default: batch)")
+    parser.add_argument("--input", default=None,
+                        help="Override: merged batched matrix from 04merge.py --batched")
+    parser.add_argument("--out-dir", default=None,
+                        help="Override: where to write *_disc.txt outputs")
     args = parser.parse_args()
 
-    os.makedirs(args.out_dir, exist_ok=True)
-    df = pd.read_csv(args.input, sep="\t")
+    base = f"03data_bbknn_b_{args.source}_{args.level}"
+    in_path  = args.input   or f"{base}/all.txt"
+    out_dir  = args.out_dir or f"{base}/"
+
+    os.makedirs(out_dir, exist_ok=True)
+    df = pd.read_csv(in_path, sep="\t")
 
     tissue = df["tissue"]
     df_tri = discretize_ternary(df.drop(columns=["tissue"]))
@@ -84,8 +105,8 @@ def main():
     df_bin = postprocess(to_binary(df_tri), tissue)
     df_tri = postprocess(df_tri, tissue)
 
-    bin_path = os.path.join(args.out_dir, "all_disc.txt")
-    tri_path = os.path.join(args.out_dir, "all_disc_tri.txt")
+    bin_path = os.path.join(out_dir, "all_disc.txt")
+    tri_path = os.path.join(out_dir, "all_disc_tri.txt")
     df_bin.to_csv(bin_path, sep="\t", index=False)
     df_tri.to_csv(tri_path, sep="\t", index=False)
     print(f">> {bin_path}")

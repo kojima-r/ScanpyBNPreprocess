@@ -2,15 +2,18 @@
 
 The canonical prep now lives at the project root in 06prep_disc.py
 and writes size-tiered all_disc{,10,100,1000}.tsv (and the _tri
-variants) into 03data_bbknn_b/, plus per-tissue files in
-03data_bbknn_b/tissue[_tri]/. This wrapper invokes it and stages
-copies into ./data_bin/ and ./data_tri/ so existing scripts keep
-working.
+variants) into 03data_bbknn_b_<source>_<level>/, plus per-tissue
+files under tissue[_tri]/. This wrapper invokes it for the canonical
+discretization branch (--source r --level batch) and stages copies
+into ./data_bin/ and ./data_tri/ so existing scripts keep working.
 """
 import runpy
 import shutil
 import sys
 from pathlib import Path
+
+SOURCE = "r"
+LEVEL  = "batch"
 
 
 def _stage(src_root: Path, dest: Path, suffix: str, tissue_subdir: str):
@@ -29,10 +32,10 @@ def _stage(src_root: Path, dest: Path, suffix: str, tissue_subdir: str):
 
 if __name__ == "__main__":
     root = Path(__file__).resolve().parent.parent
-    sys.argv = [sys.argv[0]]
+    sys.argv = [sys.argv[0], "--source", SOURCE, "--level", LEVEL]
     runpy.run_path(str(root / "06prep_disc.py"), run_name="__main__")
 
-    src = root / "03data_bbknn_b"
+    src = root / f"03data_bbknn_b_{SOURCE}_{LEVEL}"
     here = Path(__file__).resolve().parent
     _stage(src, here / "data_bin", suffix="",     tissue_subdir="tissue")
     _stage(src, here / "data_tri", suffix="_tri", tissue_subdir="tissue_tri")

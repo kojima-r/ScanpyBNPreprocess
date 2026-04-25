@@ -3,9 +3,12 @@ Transpose each (cells x genes) matrix into a (genes x cells)
 matrix, the standard layout expected by the downstream BN
 estimator.
 
-The script transposes every file matching --input-glob into the
-matching basename in --out-dir. Pass it twice if you need to handle
-both the resample and pseudo-bulk outputs.
+Default I/O is derived from --source / --level so the directory
+naming stays consistent with steps 02 and 04+:
+
+  02data_bbknn_<source>_<level>/    →   02data_bbknn_<source>_<level>_t/
+
+Pass --input-glob / --out-dir to override.
 """
 
 import argparse
@@ -13,6 +16,10 @@ import glob
 import os
 
 import pandas as pd
+
+
+SOURCES = ("r", "p")          # r = resample, p = pseudo_bulk
+LEVELS = ("tissue", "age", "batch")
 
 
 def transpose_dir(input_glob, out_dir):
@@ -26,18 +33,26 @@ def transpose_dir(input_glob, out_dir):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input-glob", required=False,
-                        help="Glob pattern for input files")
-    parser.add_argument("--out-dir", required=False,
-                        help="Output directory")
+    parser.add_argument("--source", choices=SOURCES,
+                        help="r=resample, p=pseudo_bulk (default-path generation)")
+    parser.add_argument("--level", choices=LEVELS,
+                        help="Stratification level used in step 02")
+    parser.add_argument("--input-glob", default=None,
+                        help="Override: glob pattern for input files")
+    parser.add_argument("--out-dir", default=None,
+                        help="Override: output directory")
     args = parser.parse_args()
 
     if args.input_glob and args.out_dir:
         transpose_dir(args.input_glob, args.out_dir)
-    else:
-        # Backward-compatible default: transpose both pipelines.
-        transpose_dir("02data_bbknn/*.txt",  "02data_bbknn_t/")
-        transpose_dir("02data_bbknn2/*.txt", "02data_bbknn2_t/")
+        return
+
+    if not (args.source and args.level):
+        parser.error("either (--source AND --level) or (--input-glob AND --out-dir) is required")
+
+    in_glob = args.input_glob or f"02data_bbknn_{args.source}_{args.level}/*.txt"
+    out_dir = args.out_dir   or f"02data_bbknn_{args.source}_{args.level}_t/"
+    transpose_dir(in_glob, out_dir)
 
 
 if __name__ == "__main__":
