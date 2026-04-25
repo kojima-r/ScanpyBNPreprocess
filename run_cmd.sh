@@ -1,27 +1,19 @@
-data_path=$1
-path=02data_bbknn
-data=`basename ${data_path} .txt`
-mkdir -p bs_${data}
+#!/bin/sh
+# Per-tissue BN bootstrap + final structure aggregation.
+#
+# Usage:  sh run_cmd.sh <data_path>
+#   <data_path>: a transposed per-tissue matrix (e.g. 02data_bbknn_t/Aorta.txt)
+set -e
 
+data_path="$1"
+data=$(basename "$data_path" .txt)
+out_dir="bs_${data}"
 
-ingor -B 1  -N 10 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 2  -N 10 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 3  -N 10 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 4  -N 10 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 5  -N 10 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 6  -N 10 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 7  -N 10 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 8  -N 10 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 9  -N 10 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 10 -N 10 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-sleep 1
+mkdir -p "$out_dir"
+
+for B in $(seq 1 10); do
+    ingor -B "$B" -N 10 --single-file off -o "${out_dir}/result.ing" "$data_path" &
+done
 wait
-sleep 1
 
-
-ingor --bs prefix=bs_${data}/result.ing,type=ing,ed=1000,th=0.05 -o result_${data}.txt
-
-#ingor --read file=result.txt --score data=sample002-p10-n20.txt -o result_param.txt
-
-#ingor --bs prefix=bs/result.ing,type=ing,ed=100,th=0.05 -o result.sgn3
-#ingor --read file=result.sgn3 --ec data=sample002-p10-n20.txt,method=ECv -o result_ecv.txt
+ingor --bs prefix=${out_dir}/result.ing,type=ing,ed=1000,th=0.05 -o "result_${data}.txt"

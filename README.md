@@ -1,94 +1,206 @@
 # ScanpyBNPreprocess
-Tabula Muris Senis データセットには、マウス全身のシングルセルRNA発現量データが含まれている。より具体的には、以下の２種類のデータ取得方法によるデータセットとそれらを統合し、前処理したデータセットが含まれている。
-- 1：FACS（Fluorescence-Activated Cell Sorting）方式によるシングルセルRNA-seq
-- 2：ドロップレット方式によるシングルセルRNA-seq
-- 3：Batch Balanced k-Nearest Neighbors の略で、FACS と droplet の両データを統合した後、バッチ効果補正を行った統合データ（bbknn）
 
+[Tabula Muris Senis](https://tabula-muris-senis.ds.czbiohub.org/) のシングルセル RNA-seq データを前処理し、`ingor` でベイジアンネットワーク (BN) を推定し、ECv で個別ネットワークを得るためのパイプラインです。
 
+対応している入力データ:
 
-以下からデータのダウンロード:
-https://figshare.com/ndownloader/files/23936555
+| mode      | 説明 |
+| --------- | ---- |
+| `bbknn`   | FACS と droplet を統合し BBKNN (Batch Balanced k-Nearest Neighbors) でバッチ補正した統合データ |
+| `facs`    | FACS (Fluorescence-Activated Cell Sorting) 方式 |
+| `droplet` | ドロップレット方式 |
+
+---
+
+## 0. データのダウンロード
+
+```sh
+mkdir -p data
+wget --content-disposition https://ndownloader.figshare.com/files/23936555 \
+     -O data/tabula-muris-senis-bbknn-processed-official-annotations.h5ad
+wget --content-disposition https://ndownloader.figshare.com/files/23937842 \
+     -O data/tabula-muris-senis-facs-processed-official-annotations.h5ad
+```
+
+`00info.py` は figshare の article メタデータを表示する補助スクリプトです。
+
+---
+
+## パイプライン全体像
 
 ```
-mkdir data
-
-wget --content-disposition https://ndownloader.figshare.com/files/23936555 -O data/tabula-muris-senis-bbknn-processed-official-annotations.h5ad
-
-wget --content-disposition https://ndownloader.figshare.com/files/23937842 -O data/tabula-muris-senis-facs-processed-official-annotations.h5ad
-
+h5ad ── 01preprocess ── per-tissue matrix
+                              │
+                              ├── 02resample          ── 02data_bbknn/         (cells×genes, bootstrap)
+                              ├── 02resample --batched ── 02data_bbknn_b/       (age|batch ごとに層別)
+                              └── 02pseudo_bulk       ── 02data_bbknn2/        (各臓器 1 サンプル)
+                                                            │
+                                                            ▼
+                                                       03transpose             (genes×samples)
+                                                            │
+                                                            ▼
+                                                       04merge                 (全臓器を結合)
+                                                            │
+                                                            ▼
+                                                       (05disc, optional)      ← BN 推定向けに離散化
+                                                            │
+                                                            ▼
+                                                       05run.sh                ← ingor で BN 構造推定
+                                                            │
+                                                            ▼
+                                                       06run_ecv_all.sh        ← 個別ネットワーク (ECv)
 ```
-#### 01. Preprocess
-以下のデータを読み込み
-`data/tabula-muris-senis-bbknn-processed-official-annotations.h5ad`
-別データを使う場合はソースコード内を書き換えて以下を使用するようにする
-`data/tabula-muris-senis-facs-processed-official-annotations.h5ad`
 
-##### Notebook
-`preprocess_facs.ipynb`
-および`preprocess_bbknn.ipynb`
-はh5adに標準的な処理をして、UMAPで確認したもの
+---
 
-### 02. resample/pseudo_bulk
-(現状版ではageやbatch情報は無視している)
-`resample.py`:
-ブートストラップサンプリングと同様のサンプリングを行う（N=再サンプル数）
+## 1. Preprocess — `01preprocess.py`
 
-`pseudo_bulk.py`:
-全細胞を平均して１サンプルにする
+`data/*.h5ad` から「臓器ごとの (cell × highly variable gene)」行列を書き出します。
+1 行目はサンプル ID `tissue|age|batch|cell_id` (FACS / droplet では `batch` 抜き)。
 
-##### 出力
+```sh
+python 01preprocess.py --mode bbknn
+# 入力 : data/tabula-muris-senis-bbknn-processed-official-annotations.h5ad
+# 出力 : 01data_bbknn/<tissue>.txt
+```
 
-- `02data_bbknn/` :resample.pyの出力先
-- `02data_bbknn2/` :pseudo_bulk.pyの出力先
-  
-### 03. transpose
-resampleおよびpseudo_bulkの出力結果の転置を取って、
-「行：遺伝子、列：サンプル」の遺伝子発現データに標準的な行列形式に変換する
+参考ノートブック: `preprocess_facs.ipynb`, `preprocess_bbknn.ipynb` (UMAP までの確認用)
 
-##### 出力
+---
 
-- `02data_bbknn_t/`
-- `02data_bbknn2_t/`
+## 2. Resample / Pseudo-bulk
 
-### 04. merge
-`02data_bbknn_t/`と`02data_bbknn2_t/`
-のそれぞれのファイルを読み込み、サンプル方向に結合する（全臓器のファイルを作成する、サンプル名（１行目にファイル名を付けてサンプルを区別している））
+### `02resample.py`
+ブートストラップサンプリングを行います。各臓器ファイルにつき `N` 個のリサンプル平均を出力します。
 
-##### 出力
+```sh
+# 通常版
+python 02resample.py --input-glob "01data_bbknn/*.txt" -n 10
+# 出力: 02data_bbknn/<tissue>.txt
 
-- `03data_bbknn/all.txt`
-- `03data_bbknn/all2.txt`
+# age|batch ごとの層別 (batched)
+python 02resample.py --input-glob "01data_bbknn/*.txt" -n 10 --batched
+# 出力: 02data_bbknn_b/<tissue>.txt
+```
 
-### 05. BaysianNetwork推定
+オプション:
 
-`03data_bbknn/all.txt`と`03data_bbknn/all2.txt`のそれぞれについて、
-`05run.sh`と`05run2.sh`でBNの構造推定をおこなう
+* `--size {same,root}` — リサンプルサイズを元のサンプル数 (`same`, デフォルト) か √N (`root`) にする
+* `--workers N` — 並列ワーカー数 (デフォルト 16)
 
-`05run_each.sh`は
-`02data_bbknn_t/`を元に各臓器ごとの計算を行う
-##### 出力
+### `02pseudo_bulk.py`
+各臓器の全細胞を 1 サンプルに平均化します。
 
-- `bs_all/`
-- `bs_all2/`
-- `bs_<file name>/`
+```sh
+python 02pseudo_bulk.py --input-glob "01data_bbknn/*.txt"
+# 出力: 02data_bbknn2/<tissue>.txt
+```
 
+---
 
+## 3. Transpose — `03transpose.py`
 
-### 06. 個別ネットワーク推定
+(cells × genes) を (genes × cells) に転置します。
 
+```sh
+# 引数なしで両方処理 (後方互換):
+#   02data_bbknn/*  → 02data_bbknn_t/
+#   02data_bbknn2/* → 02data_bbknn2_t/
+python 03transpose.py
 
-`bs_all/result.ing.*`から全体のネットワーク`result_all.sgn3`を作成
-その後、各臓器ごとの個別ネットワークを推定
-`ecv_all/`に出力
+# 任意の入出力を指定:
+python 03transpose.py --input-glob "02data_bbknn_b/*.txt" --out-dir 02data_bbknn_b_t/
+```
 
-##### ネットワークの可視化
-- `BN_ecv.ipynb`
+---
 
-### XX. ADマウスとの比較
-データダウンロード：
-`AD/run.sh`
+## 4. Merge — `04merge.py`
 
-前処理＆個別ネットワーク計算
-`AD_mouse.ipynb`
+各臓器のファイルを結合し、全臓器が入った 1 ファイルにします。
 
+```sh
+# 引数なしで両方処理 (後方互換):
+#   02data_bbknn_t/*  → 03data_bbknn/all.txt
+#   02data_bbknn2_t/* → 03data_bbknn/all2.txt
+python 04merge.py
 
+# batched 版 (行方向に結合し tissue 列を付加):
+python 04merge.py --batched
+# 02data_bbknn_b/* → 03data_bbknn_b/all.txt
+```
+
+`--input-glob` と `--out` を渡せば任意の組み合わせも可能です。
+
+---
+
+## 5. BN 構造推定 — `05run.sh`
+
+`ingor` を 10 並列のブートストラップで実行します。
+
+```sh
+# 03data_bbknn/all.txt に対して N=10 でブートストラップ
+sh 05run.sh 03data_bbknn/all.txt
+# 出力: bs_all/result.ing.*
+
+# all2.txt に対して N=100 (ラッパー: 05run2.sh)
+sh 05run2.sh
+# 出力: bs_all2/result.ing.*
+
+# 各臓器ごとに個別に推定
+sh 05run_each.sh
+# 出力: bs_<tissue>/result.ing.*
+```
+
+### 離散化版 — `05disc.py`
+`04merge.py --batched` の出力 (`03data_bbknn_b/all.txt`) を、各遺伝子ごとに 0.1% / 75% 分位点で binary / ternary に離散化します。
+
+```sh
+python 05disc.py
+# 出力: 03data_bbknn_b/all_disc.txt      (binary)
+#       03data_bbknn_b/all_disc_tri.txt  (ternary)
+```
+
+---
+
+## 6. 個別ネットワーク (ECv) — `06run_ecv_all.sh`
+
+ブートストラップ結果を集約し全体ネットワークを作ったあと、臓器ごとに ECv で個別ネットワークを推定します。
+
+```sh
+# bs_all + 02data_bbknn_t  → ecv_all/  (デフォルト)
+sh 06run_ecv_all.sh
+
+# bs_all2 + 02data_bbknn2_t → ecv_all2/ (ラッパー: 06run_ecv_all2.sh)
+sh 06run_ecv_all2.sh
+```
+
+可視化は `BN_ecv.ipynb` を参照。
+
+---
+
+## XX. AD マウスとの比較
+
+```sh
+# データダウンロード
+sh AD/run.sh
+```
+
+前処理と個別ネットワーク計算は `AD_mouse.ipynb` を参照。
+
+---
+
+## ディレクトリ早見表
+
+| ディレクトリ           | 内容                                                |
+| --------------------- | --------------------------------------------------- |
+| `data/`               | 入力 h5ad                                           |
+| `01data_<mode>/`      | 臓器ごとの cells×genes 行列                         |
+| `02data_bbknn/`       | resample 出力 (cells×genes)                         |
+| `02data_bbknn_b/`     | resample --batched 出力                             |
+| `02data_bbknn2/`      | pseudo_bulk 出力                                    |
+| `02data_bbknn_t/`     | resample 出力の転置 (genes×cells)                   |
+| `02data_bbknn2_t/`    | pseudo_bulk 出力の転置                              |
+| `03data_bbknn/`       | 全臓器を結合した行列 (`all.txt`, `all2.txt`)        |
+| `03data_bbknn_b/`     | batched 版の結合行列と離散化版                      |
+| `bs_<name>/`          | `ingor` のブートストラップ結果                      |
+| `ecv_all/`, `ecv_all2/` | 臓器ごとの ECv 個別ネットワーク                   |

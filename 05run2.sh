@@ -1,23 +1,3 @@
-#sh run_cmd.sh 03data_bbknn/all.txt
-
-data=all2
-path=03data_bbknn
-
-mkdir -p bs_${data}
-
-ingor -B 1  -N 100 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 2  -N 100 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 3  -N 100 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 4  -N 100 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 5  -N 100 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 6  -N 100 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 7  -N 100 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 8  -N 100 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 9  -N 100 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 10 -N 100 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-sleep 1
-wait
-sleep 1
-
-
-
+#!/bin/sh
+# Backward-compatible wrapper: bootstrap BN with N=100 over 03data_bbknn/all2.txt.
+sh "$(dirname "$0")/05run.sh" 03data_bbknn/all2.txt 100

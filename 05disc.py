@@ -1,83 +1,96 @@
+"""
+Discretize a merged expression matrix into binary and ternary
+versions for Bayesian-network input.
+
+For each gene column, compute the 0.1% and 75% quantiles and bin
+values into:
+
+* binary  : 1 if value > 0.1% quantile else 0
+* ternary : 0 below 0.1%, 1 between 0.1% and 75%, 2 above 75%
+            (collapses to a binary column when the two quantiles tie)
+
+Constant columns are dropped, the "@name" column gets its age token
+zero-padded so it sorts correctly, and a "tissue" column is restored
+from the input.
+"""
+
+import argparse
+import os
+
 import pandas as pd
 
-df = pd.read_csv('03data_bbknn_b/all.txt', sep='\t')
-# Discretize the values in df
-df_discretized = df.copy()
-df_discretized = df_discretized.drop(columns=["tissue"])
-
-for column in df_discretized.columns[2:]: # Exclude the '@name' column
-    quantiles = df_discretized[column].quantile([0.001, 0.75])
-    q0 = quantiles[0.001]+1.0e-10
-    q75 = quantiles[0.75]+1.0e-10
-    # Handle cases where q0 and q75 are the same
-    if q0 == q75:
-        df_discretized[column] = pd.cut(df_discretized[column],
-                                        bins=[-float('inf'), q0, float('inf')],
-                                        labels=[0, 1],  # Use two labels if only two bins are possible
-                                        right=False,
-                                        include_lowest=True)
-    else:
-        df_discretized[column] = pd.cut(df_discretized[column],
-                                        bins=[-float('inf'), q0, q75, float('inf')],
-                                        labels=[0, 1, 2],
-                                        right=False,
-                                        include_lowest=True)
+EPS = 1.0e-10
 
 
-# Identify columns with no variation (all values are the same)
-cols_to_drop = [col for col in df_discretized.columns if df_discretized[col].nunique() == 1]
-
-# Print the list of columns to be dropped
-print("Columns with no variation:")
-print(cols_to_drop)
-
-# Drop the identified columns from the DataFrame
-df_discretized_filtered = df_discretized.drop(columns=cols_to_drop)
-
-
-# Create a copy to avoid modifying the original DataFrame
-df_transformed = df_discretized_filtered.copy()
-
-# Create lists to store new columns
-new_cols_0_or_greater = {}
-new_cols_is_2 = {}
-
-for col in df_transformed.columns[1:]: # Exclude the '@name' column
-    # Column for 0 or >0
-    new_cols_0_or_greater[f'{col}'] = (df_transformed[col] > 0).astype(int)
-
-    # Column for value 2 (only if value 2 exists in the column)
-    #if 2 in df_transformed[col].unique():
-    #    new_cols_is_2[f'{col}_high'] = (df_transformed[col] == 2).astype(int)
-
-# Create DataFrames from the new columns
-df_0_or_greater = pd.DataFrame(new_cols_0_or_greater, index=df_transformed.index)
-df_is_2 = pd.DataFrame(new_cols_is_2, index=df_transformed.index)
+def discretize_ternary(df, q_lo=0.001, q_hi=0.75):
+    out = df.copy()
+    for col in out.columns[1:]:  # skip @name
+        q = out[col].quantile([q_lo, q_hi])
+        a = q[q_lo] + EPS
+        b = q[q_hi] + EPS
+        if a == b:
+            out[col] = pd.cut(out[col],
+                              bins=[-float("inf"), a, float("inf")],
+                              labels=[0, 1], right=False, include_lowest=True)
+        else:
+            out[col] = pd.cut(out[col],
+                              bins=[-float("inf"), a, b, float("inf")],
+                              labels=[0, 1, 2], right=False, include_lowest=True)
+    return out
 
 
-# Concatenate the original DataFrame (excluding the original numeric columns) with the new columns
-df_transformed = pd.concat([df_transformed[['@name']], df_0_or_greater, df_is_2], axis=1)
+def to_binary(df_tri):
+    """Map ternary {0,1,2} columns to binary {0,1} (any non-zero → 1)."""
+    name_col = df_tri[["@name"]]
+    body = {col: (df_tri[col] > 0).astype(int) for col in df_tri.columns[1:]}
+    return pd.concat([name_col, pd.DataFrame(body, index=df_tri.index)], axis=1)
 
 
-# Identify columns with no variation in the transformed DataFrame
-cols_to_drop_transformed = [col for col in df_transformed.columns if df_transformed[col].nunique() == 1]
-
-# Print the list of columns to be dropped
-print("Columns with no variation after transformation:")
-print(cols_to_drop_transformed)
-
-# Drop the identified columns
-df_transformed_filtered = df_transformed.drop(columns=cols_to_drop_transformed)
-df_transformed_filtered["tissue"]=df["tissue"]
-
-df_transformed_filtered['@name'] = df_transformed_filtered['@name'].apply(lambda x: '|'.join([x.split('|')[0], f'{int(x.split("|")[1][:-1]):02d}{x.split("|")[1][-1]}', x.split('|')[2]]))
-
-# sort
-df_transformed_filtered = df_transformed_filtered.sort_values(by="@name")
+def _pad_age(name):
+    """tissue|<age><suffix>|cell  →  tissue|<0-padded age><suffix>|cell."""
+    a, b, c = name.split("|")
+    return f"{a}|{int(b[:-1]):02d}{b[-1]}|{c}"
 
 
-df_transformed_filtered.to_csv('03data_bbknn_b/all_disc.txt',sep="\t",index = False)
+def postprocess(df, tissue_col):
+    constant = [c for c in df.columns if df[c].nunique() == 1]
+    if constant:
+        print(f"dropping constant columns: {constant}")
+    df = df.drop(columns=constant)
+    df["tissue"] = tissue_col
+    df["@name"] = df["@name"].apply(_pad_age)
+    return df.sort_values(by="@name")
 
 
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--input", default="03data_bbknn_b/all.txt",
+                        help="Merged batched matrix from 04merge.py --batched")
+    parser.add_argument("--out-dir", default="03data_bbknn_b/",
+                        help="Where to write *_disc.txt outputs")
+    args = parser.parse_args()
+
+    os.makedirs(args.out_dir, exist_ok=True)
+    df = pd.read_csv(args.input, sep="\t")
+
+    tissue = df["tissue"]
+    df_tri = discretize_ternary(df.drop(columns=["tissue"]))
+
+    constant = [c for c in df_tri.columns if df_tri[c].nunique() == 1]
+    if constant:
+        print(f"dropping constant columns (pre-binarize): {constant}")
+    df_tri = df_tri.drop(columns=constant)
+
+    df_bin = postprocess(to_binary(df_tri), tissue)
+    df_tri = postprocess(df_tri, tissue)
+
+    bin_path = os.path.join(args.out_dir, "all_disc.txt")
+    tri_path = os.path.join(args.out_dir, "all_disc_tri.txt")
+    df_bin.to_csv(bin_path, sep="\t", index=False)
+    df_tri.to_csv(tri_path, sep="\t", index=False)
+    print(f">> {bin_path}")
+    print(f">> {tri_path}")
 
 
+if __name__ == "__main__":
+    main()

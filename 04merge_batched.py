@@ -1,25 +1,7 @@
-import glob
-import numpy as np
-import os
-import pandas as pd
+"""Backward-compatible wrapper: merge with --batched."""
+import runpy
+import sys
 
-def run(input_files,out_dir,out_filename):
-    os.makedirs(out_dir,exist_ok=True)
-
-    all_df=[]
-    for filename in glob.glob(input_files):
-        print(filename)
-        df=pd.read_csv(filename,sep="\t",index_col=0)
-        name, _ = os.path.splitext(os.path.basename(filename))
-        df["tissue"]=name
-        all_df.append(df)
-
-    m_df=pd.concat(all_df,axis=0,join="inner")
-    print(m_df)
-    m_df.to_csv(out_dir+out_filename,sep="\t",index = True)
-
-input_files="02data_bbknn_b/*.txt"
-out_dir="03data_bbknn_b/"
-out_filename="all.txt"
-run(input_files,out_dir,out_filename)
-
+if __name__ == "__main__":
+    sys.argv = [sys.argv[0], "--batched"] + sys.argv[1:]
+    runpy.run_path("04merge.py", run_name="__main__")

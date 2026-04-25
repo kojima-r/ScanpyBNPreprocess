@@ -1,23 +1,22 @@
-#sh run_cmd.sh 03data_bbknn/all.txt
+#!/bin/sh
+# Bootstrap-style BN structure estimation with `ingor`.
+#
+# Usage:  sh 05run.sh <input.txt> [N] [out_prefix]
+#
+#   <input.txt>   : merged matrix produced by 04merge.py
+#   N             : ingor sample count (default 10; used 100 for "all2")
+#   out_prefix    : where to write per-bootstrap result.ing files
+#                   (default: bs_<basename of input>/result.ing)
+set -e
 
-data=all
-path=03data_bbknn
+input="$1"
+N="${2:-10}"
+data=$(basename "$input" .txt)
+out_prefix="${3:-bs_${data}/result.ing}"
 
-mkdir -p bs_${data}
+mkdir -p "$(dirname "$out_prefix")"
 
-ingor -B 1  -N 10 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 2  -N 10 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 3  -N 10 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 4  -N 10 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 5  -N 10 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 6  -N 10 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 7  -N 10 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 8  -N 10 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 9  -N 10 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-ingor -B 10 -N 10 --single-file off -o bs_${data}/result.ing ./${path}/${data}.txt &
-sleep 1
+for B in $(seq 1 10); do
+    ingor -B "$B" -N "$N" --single-file off -o "$out_prefix" "$input" &
+done
 wait
-sleep 1
-
-
-
