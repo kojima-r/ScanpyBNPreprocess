@@ -2,7 +2,7 @@
 # Per-tissue BN bootstrap + final structure aggregation.
 #
 # Usage:  sh run_cmd.sh <data_path>
-#   <data_path>: a transposed per-tissue matrix (e.g. 02data_bbknn_t/Aorta.txt)
+#   <data_path>: a transposed per-tissue matrix (e.g. data02_bbknn_t/Aorta.txt)
 set -e
 
 data_path="$1"

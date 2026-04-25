@@ -4,17 +4,19 @@ combined matrix.
 
 Two layouts are supported:
 
-* default: matrices are joined column-wise (samples concatenated
+* default: matrices are joined row-wise (samples stacked across
+  tissues). A "tissue" column is added to record the originating
+  file. Reads the (cells×genes) outputs of step 02 directly.
+* --transposed: matrices are joined column-wise (samples concatenated
   across tissues). Each column is renamed to "<tissue>_<sample>" so
-  the originating tissue is preserved.
-* --batched: matrices are joined row-wise. A "tissue" column is
-  added to record the originating file.
+  the originating tissue is preserved. Reads the (genes×cells)
+  outputs of step 03transpose.
 
 Default I/O is derived from --source / --level so the directory
 naming stays consistent with steps 02 and 03:
 
-  default:    02data_bbknn_<source>_<level>_t/   →  03data_bbknn_<source>_<level>/all.txt
-  --batched:  02data_bbknn_<source>_<level>/     →  03data_bbknn_b_<source>_<level>/all.txt
+  default:      data02_bbknn_<source>_<level>/    →  data03_bbknn_<source>_<level>/all.txt
+  --transposed: data02_bbknn_<source>_<level>_t/  →  data03_bbknn_<source>_<level>_t/all.txt
 
 Pass --input-glob / --out to override.
 """
@@ -62,7 +64,7 @@ def main():
                         help="r=resample, p=pseudo_bulk (default-path generation)")
     parser.add_argument("--level", choices=LEVELS,
                         help="Stratification level used in step 02")
-    parser.add_argument("--batched", action="store_true",
+    parser.add_argument("--transposed", action="store_true",
                         help="Stack rows (with a 'tissue' column) instead of columns")
     parser.add_argument("--input-glob", default=None,
                         help="Override: glob pattern for input files")
@@ -70,7 +72,7 @@ def main():
                         help="Override: output file path")
     args = parser.parse_args()
 
-    fn = merge_rows if args.batched else merge_columns
+    fn = merge_columns if args.transposed else merge_rows
 
     if args.input_glob and args.out:
         os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
@@ -80,12 +82,12 @@ def main():
     if not (args.source and args.level):
         parser.error("either (--source AND --level) or (--input-glob AND --out) is required")
 
-    if args.batched:
-        in_glob = args.input_glob or f"02data_bbknn_{args.source}_{args.level}/*.txt"
-        out    = args.out        or f"03data_bbknn_b_{args.source}_{args.level}/all.txt"
+    if args.transposed:
+        in_glob = args.input_glob or f"data02_bbknn_{args.source}_{args.level}_t/*.txt"
+        out    = args.out        or f"data03_bbknn_{args.source}_{args.level}_t/all.txt"
     else:
-        in_glob = args.input_glob or f"02data_bbknn_{args.source}_{args.level}_t/*.txt"
-        out    = args.out        or f"03data_bbknn_{args.source}_{args.level}/all.txt"
+        in_glob = args.input_glob or f"data02_bbknn_{args.source}_{args.level}/*.txt"
+        out    = args.out        or f"data03_bbknn_{args.source}_{args.level}/all.txt"
 
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
     fn(in_glob, out)

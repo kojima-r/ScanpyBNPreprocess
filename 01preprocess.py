@@ -50,11 +50,11 @@ def main():
     parser.add_argument("--input", default=None,
                         help="Path to the input .h5ad file (defaults depend on --mode)")
     parser.add_argument("--out-dir", default=None,
-                        help="Output directory (default: 01data_<mode>/)")
+                        help="Output directory (default: data01_<mode>/)")
     args = parser.parse_args()
 
     input_path = args.input or DEFAULT_INPUTS[args.mode]
-    out_dir = args.out_dir or f"01data_{args.mode}/"
+    out_dir = args.out_dir or f"data01_{args.mode}/"
     os.makedirs(out_dir, exist_ok=True)
 
     adata = sc.read(input_path)

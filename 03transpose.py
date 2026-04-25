@@ -6,7 +6,7 @@ estimator.
 Default I/O is derived from --source / --level so the directory
 naming stays consistent with steps 02 and 04+:
 
-  02data_bbknn_<source>_<level>/    →   02data_bbknn_<source>_<level>_t/
+  data02_bbknn_<source>_<level>/    →   data02_bbknn_<source>_<level>_t/
 
 Pass --input-glob / --out-dir to override.
 """
@@ -50,8 +50,8 @@ def main():
     if not (args.source and args.level):
         parser.error("either (--source AND --level) or (--input-glob AND --out-dir) is required")
 
-    in_glob = args.input_glob or f"02data_bbknn_{args.source}_{args.level}/*.txt"
-    out_dir = args.out_dir   or f"02data_bbknn_{args.source}_{args.level}_t/"
+    in_glob = args.input_glob or f"data02_bbknn_{args.source}_{args.level}/*.txt"
+    out_dir = args.out_dir   or f"data02_bbknn_{args.source}_{args.level}_t/"
     transpose_dir(in_glob, out_dir)
 
 

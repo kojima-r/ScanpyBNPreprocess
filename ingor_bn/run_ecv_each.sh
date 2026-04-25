@@ -3,13 +3,13 @@
 #
 # Usage:  sh 06run_ecv_all.sh [tag]
 #
-#   tag : "" (default) processes bs_all + 02data_bbknn_t  → ecv_all/
-#         "2"          processes bs_all2 + 02data_bbknn2_t → ecv_all2/
+#   tag : "" (default) processes bs_all + data02_bbknn_t  → ecv_all/
+#         "2"          processes bs_all2 + data02_bbknn2_t → ecv_all2/
 set -e
 
 tag="$1"
+src_dir="$2"
 bs_dir="bs_all${tag}"
-src_dir="02data_bbknn${tag}_t"
 out_dir="ecv_all${tag}"
 sgn="result_all${tag}.sgn3"
 txt="result_all${tag}.txt"
@@ -21,7 +21,7 @@ mkdir -p "$out_dir"
 
 ingor --bs prefix=${bs_dir}/result.ing,type=ing,ed=1000,th=0.05 -o "$sgn"
 ingor --bs prefix=${bs_dir}/result.ing,type=ing,ed=1000,th=0.05 -o "$txt"
-
+echo "========"
 for f in "${src_dir}"/*.txt; do
     name=$(basename "$f" .txt)
     echo "$name"

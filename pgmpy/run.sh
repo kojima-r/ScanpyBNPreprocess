@@ -4,7 +4,7 @@
 # Reads the canonical binary subset staged by ../06prep_disc.py.
 set -e
 
-input="${1:-../03data_bbknn_b_r_batch/all_disc100.tsv}"
+input="${1:-../data04_bbknn_p_tissue_disc/all_disc10.tsv}"
 python learn_bn_pgmpy.py "$input" \
   --discretize quantile --bins 3 \
   --estimator hybrid --score k2 \

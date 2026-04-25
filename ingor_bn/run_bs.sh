@@ -11,12 +11,13 @@ set -e
 
 input="$1"
 N="${2:-10}"
+M="${3:-10}"
 data=$(basename "$input" .txt)
-out_prefix="${3:-bs_${data}/result.ing}"
+out_prefix="${4:-bs_${data}/result.ing}"
 
 mkdir -p "$(dirname "$out_prefix")"
 
-for B in $(seq 1 10); do
+for B in $(seq 1 ${M}); do
     ingor -B "$B" -N "$N" --single-file off -o "$out_prefix" "$input" &
 done
 wait

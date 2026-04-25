@@ -2,6 +2,16 @@
 Discretize a merged expression matrix into binary and ternary
 versions for Bayesian-network input.
 
+Accepts either of the two layouts emitted by 04merge.py:
+
+* default (row-merged, samples × genes; the input may carry a
+  "tissue" column from 04merge — it is passed through as-is) —
+  reads data03_bbknn_<source>_<level>/all.txt.
+* --transposed (column-merged, genes × samples) — reads
+  data03_bbknn_<source>_<level>_t/all.txt and transposes it to
+  samples × genes for discretization. Column headers from the
+  merged file become @name values verbatim.
+
 For each gene column, compute the 0.1% and 75% quantiles and bin
 values into:
 
@@ -9,9 +19,8 @@ values into:
 * ternary : 0 below 0.1%, 1 between 0.1% and 75%, 2 above 75%
             (collapses to a binary column when the two quantiles tie)
 
-Constant columns are dropped, the "@name" column gets its age token
-zero-padded so it sorts correctly, and a "tissue" column is restored
-from the input.
+Constant gene columns are dropped. @name is left untouched and no
+"tissue" column is added by this step.
 """
 
 import argparse
@@ -21,10 +30,16 @@ import pandas as pd
 
 EPS = 1.0e-10
 
+META_COLS = ("@name", "tissue")
+
+
+def _gene_columns(df):
+    return [c for c in df.columns if c not in META_COLS]
+
 
 def discretize_ternary(df, q_lo=0.001, q_hi=0.75):
     out = df.copy()
-    for col in out.columns[1:]:  # skip @name
+    for col in _gene_columns(out):
         q = out[col].quantile([q_lo, q_hi])
         a = q[q_lo] + EPS
         b = q[q_hi] + EPS
@@ -40,39 +55,25 @@ def discretize_ternary(df, q_lo=0.001, q_hi=0.75):
 
 
 def to_binary(df_tri):
-    """Map ternary {0,1,2} columns to binary {0,1} (any non-zero → 1)."""
-    name_col = df_tri[["@name"]]
-    body = {col: (df_tri[col] > 0).astype(int) for col in df_tri.columns[1:]}
-    return pd.concat([name_col, pd.DataFrame(body, index=df_tri.index)], axis=1)
-
-
-def _pad_age(name):
-    """Zero-pad the first '<n>m' / '<n>d' age token in a '|'-joined name.
-
-    Works for any number of parts, so it accepts both the legacy
-    "s<i>|<age>|<batch>" form and the aligned
-    "s<i>|<tissue>|<age>|<batch>" form emitted by 02resample.py.
-    """
-    parts = name.split("|")
-    for i, p in enumerate(parts):
-        if len(p) >= 2 and p[-1] in ("m", "d") and p[:-1].isdigit():
-            parts[i] = f"{int(p[:-1]):02d}{p[-1]}"
-            break
-    return "|".join(parts)
-
-
-def postprocess(df, tissue_col):
-    constant = [c for c in df.columns if df[c].nunique() == 1]
-    if constant:
-        print(f"dropping constant columns: {constant}")
-    df = df.drop(columns=constant)
-    df["tissue"] = tissue_col
-    df["@name"] = df["@name"].apply(_pad_age)
-    return df.sort_values(by="@name")
+    """Map ternary {0,1,2} gene columns to binary {0,1} (any non-zero → 1)."""
+    out = df_tri.copy()
+    for col in _gene_columns(out):
+        out[col] = (df_tri[col].astype(int) > 0).astype(int)
+    return out
 
 
 SOURCES = ("r", "p")
 LEVELS = ("tissue", "age", "batch")
+
+
+def load_merged(in_path, transposed):
+    """Return a (samples × genes) frame with @name as the first column."""
+    if not transposed:
+        return pd.read_csv(in_path, sep="\t")
+
+    raw = pd.read_csv(in_path, sep="\t").set_index("@name").T
+    raw.index.name = "@name"
+    return raw.reset_index()
 
 
 def main():
@@ -81,29 +82,29 @@ def main():
                         help="r=resample, p=pseudo_bulk (default-path generation)")
     parser.add_argument("--level", choices=LEVELS, default="batch",
                         help="Stratification level used in step 02 (default: batch)")
+    parser.add_argument("--transposed", action="store_true",
+                        help="Read column-merged (genes×samples) output of 04merge.py --transposed")
     parser.add_argument("--input", default=None,
-                        help="Override: merged batched matrix from 04merge.py --batched")
+                        help="Override: merged matrix from 04merge.py")
     parser.add_argument("--out-dir", default=None,
                         help="Override: where to write *_disc.txt outputs")
     args = parser.parse_args()
 
-    base = f"03data_bbknn_b_{args.source}_{args.level}"
+    suffix = "_t" if args.transposed else ""
+    base = f"data03_bbknn_{args.source}_{args.level}{suffix}"
     in_path  = args.input   or f"{base}/all.txt"
     out_dir  = args.out_dir or f"{base}/"
 
     os.makedirs(out_dir, exist_ok=True)
-    df = pd.read_csv(in_path, sep="\t")
+    df = load_merged(in_path, args.transposed)
+    df_tri = discretize_ternary(df)
 
-    tissue = df["tissue"]
-    df_tri = discretize_ternary(df.drop(columns=["tissue"]))
-
-    constant = [c for c in df_tri.columns if df_tri[c].nunique() == 1]
+    constant = [c for c in _gene_columns(df_tri) if df_tri[c].nunique() == 1]
     if constant:
-        print(f"dropping constant columns (pre-binarize): {constant}")
+        print(f"dropping constant columns: {constant}")
     df_tri = df_tri.drop(columns=constant)
 
-    df_bin = postprocess(to_binary(df_tri), tissue)
-    df_tri = postprocess(df_tri, tissue)
+    df_bin = to_binary(df_tri)
 
     bin_path = os.path.join(out_dir, "all_disc.txt")
     tri_path = os.path.join(out_dir, "all_disc_tri.txt")

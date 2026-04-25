@@ -231,6 +231,8 @@ def main():
                         help="Score function to use: bic or bdeu (default: bic).")
     parser.add_argument("--ess", type=float, default=1.0,
                         help="Equivalent sample size for BDeu (default: 1.0).")
+    parser.add_argument("--out", type=str, default="./",
+                        help="Output directory (default: ./).")
 
     args = parser.parse_args()
 
@@ -258,8 +260,8 @@ def main():
                               ess=args.ess)
 
     # Save JSON next to input
-    out_path = csv_path.with_suffix("")
-    out_json = out_path.as_posix() + "_bn_structure.json"
+    out_name = csv_path.with_suffix("").name
+    out_json = args.out + out_name + "_bn_structure.json"
     with open(out_json, "w", encoding="utf-8") as f:
         json.dump(sol, f, ensure_ascii=False, indent=2)
 

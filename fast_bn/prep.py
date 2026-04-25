@@ -2,7 +2,7 @@
 
 The canonical prep now lives at the project root in 06prep_disc.py
 and writes size-tiered all_disc{,10,100,1000}.tsv (and the _tri
-variants) into 03data_bbknn_b_<source>_<level>/, plus per-tissue
+variants) into data04_bbknn_<source>_<level>_disc/, plus per-tissue
 files under tissue[_tri]/. This wrapper invokes it for the canonical
 discretization branch (--source r --level batch) and stages copies
 into ./data_bin/ and ./data_tri/ so existing scripts keep working.
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     sys.argv = [sys.argv[0], "--source", SOURCE, "--level", LEVEL]
     runpy.run_path(str(root / "06prep_disc.py"), run_name="__main__")
 
-    src = root / f"03data_bbknn_b_{SOURCE}_{LEVEL}"
+    src = root / f"data04_bbknn_{SOURCE}_{LEVEL}_disc"
     here = Path(__file__).resolve().parent
     _stage(src, here / "data_bin", suffix="",     tissue_subdir="tissue")
     _stage(src, here / "data_tri", suffix="_tri", tissue_subdir="tissue_tri")

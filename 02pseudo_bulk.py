@@ -11,7 +11,7 @@ prefix is used as the group key:
   --level batch   -> "<tissue>|<age>|<batch>"  (1 row per (tissue, age, batch))
 
 The first column of the output is the group key itself. The default
-output directory is 02data_bbknn_p_<level>/.
+output directory is data02_bbknn_p_<level>/.
 """
 
 import argparse
@@ -60,17 +60,17 @@ def _worker(in_path, out_dir, level):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input-glob", default="01data_bbknn/*.txt",
+    parser.add_argument("--input-glob", default="data01_bbknn/*.txt",
                         help="Glob pattern for input per-tissue files")
     parser.add_argument("--level", choices=list(LEVEL_DEPTH), default="tissue",
                         help="Aggregation level: tissue / age / batch (default: tissue)")
     parser.add_argument("--out-dir", default=None,
-                        help="Output directory (default: 02data_bbknn_p_<level>/)")
+                        help="Output directory (default: data02_bbknn_p_<level>/)")
     parser.add_argument("--workers", type=int, default=16,
                         help="Process-pool size")
     args = parser.parse_args()
 
-    out_dir = args.out_dir or f"02data_bbknn_p_{args.level}/"
+    out_dir = args.out_dir or f"data02_bbknn_p_{args.level}/"
     os.makedirs(out_dir, exist_ok=True)
     files = sorted(glob.glob(args.input_glob))
     with Pool(args.workers) as pool:
