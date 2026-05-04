@@ -10,8 +10,11 @@ prefix is used as the group key:
   --level age     -> "<tissue>|<age>"      (1 row per (tissue, age))
   --level batch   -> "<tissue>|<age>|<batch>"  (1 row per (tissue, age, batch))
 
-The first column of the output is the group key itself. The default
-output directory is data02_bbknn_p_<level>/.
+The first column of the output is the group key itself.
+
+--target controls the dataset slot in default I/O paths
+(data01_<target>/  ->  data02_<target>_p_<level>/). Defaults to bbknn;
+pass facs / tps / droplet (or any custom name) to switch pipelines.
 """
 
 import argparse
@@ -60,19 +63,25 @@ def _worker(in_path, out_dir, level):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input-glob", default="data01_bbknn/*.txt",
-                        help="Glob pattern for input per-tissue files")
+    parser.add_argument("--target", default="bbknn",
+                        help="Dataset slot used in default I/O paths "
+                             "(data01_<target>/ -> data02_<target>_p_<level>/). "
+                             "Default: bbknn.")
+    parser.add_argument("--input-glob", default=None,
+                        help="Glob pattern for input per-tissue files "
+                             "(default: data01_<target>/*.txt)")
     parser.add_argument("--level", choices=list(LEVEL_DEPTH), default="tissue",
                         help="Aggregation level: tissue / age / batch (default: tissue)")
     parser.add_argument("--out-dir", default=None,
-                        help="Output directory (default: data02_bbknn_p_<level>/)")
+                        help="Output directory (default: data02_<target>_p_<level>/)")
     parser.add_argument("--workers", type=int, default=16,
                         help="Process-pool size")
     args = parser.parse_args()
 
-    out_dir = args.out_dir or f"data02_bbknn_p_{args.level}/"
+    input_glob = args.input_glob or f"data01_{args.target}/*.txt"
+    out_dir = args.out_dir or f"data02_{args.target}_p_{args.level}/"
     os.makedirs(out_dir, exist_ok=True)
-    files = sorted(glob.glob(args.input_glob))
+    files = sorted(glob.glob(input_glob))
     with Pool(args.workers) as pool:
         pool.map(partial(_worker, out_dir=out_dir, level=args.level), files)
 

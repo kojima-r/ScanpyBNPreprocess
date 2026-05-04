@@ -6,11 +6,14 @@ Accepts either of the two layouts emitted by 04merge.py:
 
 * default (row-merged, samples × genes; the input may carry a
   "tissue" column from 04merge — it is passed through as-is) —
-  reads data03_bbknn_<source>_<level>/all.txt.
+  reads data03_<target>_<source>_<level>/all.txt.
 * --transposed (column-merged, genes × samples) — reads
-  data03_bbknn_<source>_<level>_t/all.txt and transposes it to
+  data03_<target>_<source>_<level>_t/all.txt and transposes it to
   samples × genes for discretization. Column headers from the
   merged file become @name values verbatim.
+
+--target defaults to bbknn; pass facs / tps / droplet (or any custom
+name) to switch pipelines.
 
 For each gene column, compute the 0.1% and 75% quantiles and bin
 values into:
@@ -26,6 +29,7 @@ Constant gene columns are dropped. @name is left untouched and no
 import argparse
 import os
 
+import numpy as np
 import pandas as pd
 
 EPS = 1.0e-10
@@ -35,6 +39,25 @@ META_COLS = ("@name", "tissue")
 
 def _gene_columns(df):
     return [c for c in df.columns if c not in META_COLS]
+
+
+def _entropy(series):
+    counts = series.value_counts(dropna=False).to_numpy(dtype=float)
+    if counts.size <= 1:
+        return 0.0
+    p = counts / counts.sum()
+    return float(-(p * np.log2(p)).sum())
+
+
+def filter_by_entropy(df, min_entropy):
+    """Drop gene columns whose Shannon entropy (bits) is <= min_entropy.
+
+    With min_entropy=0 this still drops constant columns (entropy=0).
+    """
+    drop = [c for c in _gene_columns(df) if _entropy(df[c]) <= min_entropy]
+    if drop:
+        print(f"dropping {len(drop)} cols with entropy <= {min_entropy}: {drop}")
+    return df.drop(columns=drop)
 
 
 def discretize_ternary(df, q_lo=0.001, q_hi=0.75):
@@ -78,6 +101,10 @@ def load_merged(in_path, transposed):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--target", default="bbknn",
+                        help="Dataset slot used in default I/O paths "
+                             "(data03_<target>_<source>_<level>{,_t}/). "
+                             "Default: bbknn.")
     parser.add_argument("--source", choices=SOURCES, default="r",
                         help="r=resample, p=pseudo_bulk (default-path generation)")
     parser.add_argument("--level", choices=LEVELS, default="batch",
@@ -88,30 +115,33 @@ def main():
                         help="Override: merged matrix from 04merge.py")
     parser.add_argument("--out-dir", default=None,
                         help="Override: where to write *_disc.txt outputs")
+    parser.add_argument("--min-entropy", type=float, default=0.0,
+                        help="Drop discretized gene columns whose Shannon "
+                             "entropy (bits) is <= this threshold. "
+                             "0 (default) drops only constant columns.")
     args = parser.parse_args()
 
     suffix = "_t" if args.transposed else ""
-    base = f"data03_bbknn_{args.source}_{args.level}{suffix}"
+    base = f"data03_{args.target}_{args.source}_{args.level}{suffix}"
     in_path  = args.input   or f"{base}/all.txt"
     out_dir  = args.out_dir or f"{base}/"
 
     os.makedirs(out_dir, exist_ok=True)
     df = load_merged(in_path, args.transposed)
+    print(f"input:", df.shape)
+
     df_tri = discretize_ternary(df)
-
-    constant = [c for c in _gene_columns(df_tri) if df_tri[c].nunique() == 1]
-    if constant:
-        print(f"dropping constant columns: {constant}")
-    df_tri = df_tri.drop(columns=constant)
-
+    df_tri = filter_by_entropy(df_tri, args.min_entropy)
+    
     df_bin = to_binary(df_tri)
+    df_bin = filter_by_entropy(df_bin, args.min_entropy)
 
     bin_path = os.path.join(out_dir, "all_disc.txt")
     tri_path = os.path.join(out_dir, "all_disc_tri.txt")
     df_bin.to_csv(bin_path, sep="\t", index=False)
     df_tri.to_csv(tri_path, sep="\t", index=False)
-    print(f">> {bin_path}")
-    print(f">> {tri_path}")
+    print(f">> {bin_path}", df_bin.shape)
+    print(f">> {tri_path}", df_tri.shape)
 
 
 if __name__ == "__main__":

@@ -42,7 +42,10 @@ def main():
                         help="Output directory (default: data01_tps/)")
     args = parser.parse_args()
 
-    out_dir = args.out_dir or f"data01_tps/"
+    if args.mode=="smartseq":
+        out_dir = args.out_dir or f"data01_tps/"
+    else: # 10X
+        out_dir = args.out_dir or f"data01_tps10x/"
     os.makedirs(out_dir, exist_ok=True)
     
     for input_path in glob.glob("data/Tabula_Sapiens*.h5ad"):

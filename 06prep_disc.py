@@ -16,6 +16,9 @@ skipped.
 
 If a ternary input is also present, the same set of files is written
 with a "_tri" suffix (and into a "tissue_tri/" subdirectory).
+
+--target defaults to bbknn; pass facs / tps / droplet (or any custom
+name) to switch pipelines (data03_<target>_..., data04_<target>_...).
 """
 
 import argparse
@@ -67,6 +70,10 @@ LEVELS = ("tissue", "age", "batch")
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--target", default="bbknn",
+                        help="Dataset slot used in default I/O paths "
+                             "(data03_<target>_..., data04_<target>_..._disc/). "
+                             "Default: bbknn.")
     parser.add_argument("--source", choices=SOURCES, default="r",
                         help="r=resample, p=pseudo_bulk (default-path generation)")
     parser.add_argument("--level", choices=LEVELS, default="batch",
@@ -82,10 +89,10 @@ def main():
     args = parser.parse_args()
 
     suffix = "_t" if args.transposed else ""
-    base = f"data03_bbknn_{args.source}_{args.level}{suffix}"
+    base = f"data03_{args.target}_{args.source}_{args.level}{suffix}"
     bin_in  = args.bin_input or f"{base}/all_disc.txt"
     tri_in  = args.tri_input or f"{base}/all_disc_tri.txt"
-    out_dir = args.out_dir   or f"data04_bbknn_{args.source}_{args.level}{suffix}_disc/"
+    out_dir = args.out_dir   or f"data04_{args.target}_{args.source}_{args.level}{suffix}_disc/"
 
     prep(bin_in, out_dir, suffix="")
     prep(tri_in, out_dir, suffix="_tri")

@@ -3,12 +3,13 @@ Transpose each (cells x genes) matrix into a (genes x cells)
 matrix, the standard layout expected by the downstream BN
 estimator.
 
-Default I/O is derived from --source / --level so the directory
-naming stays consistent with steps 02 and 04+:
+Default I/O is derived from --target / --source / --level so the
+directory naming stays consistent with steps 02 and 04+:
 
-  data02_bbknn_<source>_<level>/    →   data02_bbknn_<source>_<level>_t/
+  data02_<target>_<source>_<level>/    →   data02_<target>_<source>_<level>_t/
 
-Pass --input-glob / --out-dir to override.
+--target defaults to bbknn; pass facs / tps / droplet (or any custom
+name) to switch pipelines. Pass --input-glob / --out-dir to override.
 """
 
 import argparse
@@ -33,6 +34,10 @@ def transpose_dir(input_glob, out_dir):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--target", default="bbknn",
+                        help="Dataset slot used in default I/O paths "
+                             "(data02_<target>_<source>_<level>/). "
+                             "Default: bbknn.")
     parser.add_argument("--source", choices=SOURCES,
                         help="r=resample, p=pseudo_bulk (default-path generation)")
     parser.add_argument("--level", choices=LEVELS,
@@ -50,8 +55,8 @@ def main():
     if not (args.source and args.level):
         parser.error("either (--source AND --level) or (--input-glob AND --out-dir) is required")
 
-    in_glob = args.input_glob or f"data02_bbknn_{args.source}_{args.level}/*.txt"
-    out_dir = args.out_dir   or f"data02_bbknn_{args.source}_{args.level}_t/"
+    in_glob = args.input_glob or f"data02_{args.target}_{args.source}_{args.level}/*.txt"
+    out_dir = args.out_dir   or f"data02_{args.target}_{args.source}_{args.level}_t/"
     transpose_dir(in_glob, out_dir)
 
 

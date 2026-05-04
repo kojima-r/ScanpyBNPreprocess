@@ -38,29 +38,32 @@ wget --content-disposition https://ndownloader.figshare.com/files/23937842 \
 
 ## パイプライン全体像
 
+> **`--target <name>` 共通オプション (steps 02–06)**
+> パイプライン 02 以降のスクリプトは `--target` で `data0?_<target>_...` の `<target>` スロットを切り替えられます。既定値は `bbknn` で、`facs` / `tps` / `droplet` あるいは任意の名前を渡せば、対応する `data01_<target>/` を入力として下流のディレクトリ名にも `<target>` が伝播します。例えば `--target facs` を指定すると、以降のステップは `data01_facs/`, `data02_facs_r_tissue/`, `data03_facs_r_tissue_t/`, `data04_facs_r_batch_disc/` のように動作します。
+
 ```
                         h5ad
                           │
                           ▼
                   01preprocess.py
                           │
-              per-tissue (cells×genes)  ─── data01_<mode>/
+              per-tissue (cells×genes)  ─── data01_<target>/
                           │
         ┌─────────────────┼─────────────────────┐
         ▼                 ▼                     ▼
-  02resample.py --level <L>                  02pseudo_bulk.py --level <L>
+  02resample.py --target <T> --level <L>     02pseudo_bulk.py --target <T> --level <L>
    <src>=r                                    <src>=p
         │                                          │
         ▼                                          ▼
-  data02_bbknn_r_<L>/                       data02_bbknn_p_<L>/
+  data02_<T>_r_<L>/                          data02_<T>_p_<L>/
         │                                          │
         ├── 連続値経路 (col-merge) ────────────────┤
         │                                          │
-        ▼ 03transpose --source <src> --level <L>   ▼
-  data02_bbknn_<src>_<L>_t/                  data02_bbknn_<src>_<L>_t/
+        ▼ 03transpose --target <T> --source <src> --level <L>
+  data02_<T>_<src>_<L>_t/                    data02_<T>_<src>_<L>_t/
         │                                          │
-        ▼ 04merge --transposed --source <src> --level <L>
-  data03_bbknn_<src>_<L>_t/all.txt           data03_bbknn_<src>_<L>_t/all.txt
+        ▼ 04merge --transposed --target <T> --source <src> --level <L>
+  data03_<T>_<src>_<L>_t/all.txt             data03_<T>_<src>_<L>_t/all.txt
                           │
                           ▼
         ┌──────────────────────────────────────┐
@@ -69,16 +72,16 @@ wget --content-disposition https://ndownloader.figshare.com/files/23937842 \
 
         └── 離散化経路 (row-merge / disc) ──┐
                                             ▼
-                              04merge --source <src> --level <L>
-                              data03_bbknn_<src>_<L>/all.txt
+                              04merge --target <T> --source <src> --level <L>
+                              data03_<T>_<src>_<L>/all.txt
                                             │
-                                            ▼ 05disc.py
-                              data03_bbknn_<src>_<L>/all_disc.txt
-                              data03_bbknn_<src>_<L>/all_disc_tri.txt
+                                            ▼ 05disc.py --target <T> ...
+                              data03_<T>_<src>_<L>/all_disc.txt
+                              data03_<T>_<src>_<L>/all_disc_tri.txt
                                             │
-                                            ▼ 06prep_disc.py
-                              data04_bbknn_<src>_<L>_disc/all_disc{,10,100,1000}.tsv
-                              data04_bbknn_<src>_<L>_disc/tissue/<tissue>.tsv
+                                            ▼ 06prep_disc.py --target <T> ...
+                              data04_<T>_<src>_<L>_disc/all_disc{,10,100,1000}.tsv
+                              data04_<T>_<src>_<L>_disc/tissue/<tissue>.tsv
                                             │
                                             ▼
                               ┌─────────────────────────────┐
@@ -86,9 +89,9 @@ wget --content-disposition https://ndownloader.figshare.com/files/23937842 \
                               └─────────────────────────────┘
 
   ※ 05disc.py / 06prep_disc.py は --transposed を渡すと
-    data03_bbknn_<src>_<L>_t/all.txt も入力として受け付けます。
+    data03_<T>_<src>_<L>_t/all.txt も入力として受け付けます。
     05disc は同ディレクトリに、06prep_disc は
-    data04_bbknn_<src>_<L>{,_t}_disc/ に書き出します。
+    data04_<T>_<src>_<L>{,_t}_disc/ に書き出します。
 ```
 
 ---
@@ -132,9 +135,11 @@ Aorta|18m|1|A16_B002505_B008538_S16.mm10-plus-5-0-1    0.0       0.892341   0.0 
 | `batch`   | `s<i>\|<tissue>\|<age>\|<batch>`               | `data02_bbknn_r_batch/`   |
 
 ```sh
-python 02resample.py --input-glob "data01_bbknn/*.txt" --level tissue -n 10
-python 02resample.py --input-glob "data01_bbknn/*.txt" --level age    -n 10
-python 02resample.py --input-glob "data01_bbknn/*.txt" --level batch  -n 10  # 離散化系バックエンド向け
+python 02resample.py --level tissue -n 10                # bbknn (既定): data01_bbknn/ → data02_bbknn_r_tissue/
+python 02resample.py --level age    -n 10
+python 02resample.py --level batch  -n 10                # 離散化系バックエンド向け
+python 02resample.py --target facs --level tissue -n 10  # FACS 用: data01_facs/ → data02_facs_r_tissue/
+python 02resample.py --target tps  --level tissue -n 10  # TPS 用:  data01_tps/  → data02_tps_r_tissue/
 ```
 
 **出力例 (`--level tissue`, `-n 2`):** `data02_bbknn_r_tissue/Aorta.txt`
@@ -181,9 +186,11 @@ s1|Aorta|18m|1      0.487469    0.428553    ...
 | `batch`   | `<tissue>\|<age>\|<batch>`            | `data02_bbknn_p_batch/`    |
 
 ```sh
-python 02pseudo_bulk.py --input-glob "data01_bbknn/*.txt" --level tissue
-python 02pseudo_bulk.py --input-glob "data01_bbknn/*.txt" --level age
-python 02pseudo_bulk.py --input-glob "data01_bbknn/*.txt" --level batch
+python 02pseudo_bulk.py --level tissue                   # bbknn (既定)
+python 02pseudo_bulk.py --level age
+python 02pseudo_bulk.py --level batch
+python 02pseudo_bulk.py --target facs --level tissue     # FACS 用
+python 02pseudo_bulk.py --target tps  --level tissue     # TPS 用
 ```
 
 **出力例 (`--level tissue`):** `data02_bbknn_p_tissue/Aorta.txt` (1 行)
@@ -229,6 +236,10 @@ python 03transpose.py --source r --level tissue
 # pseudo_bulk (--level age) を転置
 python 03transpose.py --source p --level age
 #   data02_bbknn_p_age/*  →  data02_bbknn_p_age_t/
+
+# FACS 用に切り替え
+python 03transpose.py --target facs --source r --level tissue
+#   data02_facs_r_tissue/*  →  data02_facs_r_tissue_t/
 ```
 
 **入力例:** `data02_bbknn_r_tissue/Aorta.txt` (上記 §2 の出力, `samples × genes`)
@@ -534,20 +545,20 @@ sh AD/run.sh
 
 ## ディレクトリ早見表
 
-命名規則: `<src>` ∈ {`r` (resample), `p` (pseudo_bulk)}、`<L>` ∈ {`tissue`, `age`, `batch`}。
+命名規則: `<T>` ∈ {`bbknn` (既定), `facs`, `tps`, `droplet`, …} (= `--target`)、`<src>` ∈ {`r` (resample), `p` (pseudo_bulk)}、`<L>` ∈ {`tissue`, `age`, `batch`}。
 
 | ディレクトリ                        | 内容                                                    |
 | ----------------------------------- | ------------------------------------------------------- |
 | `data/`                             | 入力 h5ad                                               |
-| `data01_<mode>/`                    | 臓器ごとの cells×genes 行列                            |
-| `data02_bbknn_r_<L>/`               | resample 出力                                           |
-| `data02_bbknn_p_<L>/`               | pseudo_bulk 出力                                        |
-| `data02_bbknn_<src>_<L>_t/`         | 上記の転置 (genes×cells)                              |
-| `data03_bbknn_<src>_<L>/all.txt`    | 行方向結合 (既定) — 離散化前の元データ                  |
-| `data03_bbknn_<src>_<L>_t/all.txt`  | 列方向結合 (`--transposed`) — ingor 入口 (連続値)       |
-| `data03_bbknn_<src>_<L>{,_t}/all_disc{,_tri}.txt`        | 離散化後 (binary / ternary)     |
-| `data04_bbknn_<src>_<L>{,_t}_disc/all_disc{,10,100,1000}.tsv` | 離散化系 4 出口の共通入力  |
-| `data04_bbknn_<src>_<L>_disc/tissue[_tri]/`              | 臓器別 0/1 (or 0/1/2) 表 (行方向結合のみ)   |
+| `data01_<T>/`                       | 臓器ごとの cells×genes 行列                            |
+| `data02_<T>_r_<L>/`                 | resample 出力                                           |
+| `data02_<T>_p_<L>/`                 | pseudo_bulk 出力                                        |
+| `data02_<T>_<src>_<L>_t/`           | 上記の転置 (genes×cells)                              |
+| `data03_<T>_<src>_<L>/all.txt`      | 行方向結合 (既定) — 離散化前の元データ                  |
+| `data03_<T>_<src>_<L>_t/all.txt`    | 列方向結合 (`--transposed`) — ingor 入口 (連続値)       |
+| `data03_<T>_<src>_<L>{,_t}/all_disc{,_tri}.txt`        | 離散化後 (binary / ternary)       |
+| `data04_<T>_<src>_<L>{,_t}_disc/all_disc{,10,100,1000}.tsv` | 離散化系 4 出口の共通入力    |
+| `data04_<T>_<src>_<L>_disc/tissue[_tri]/`              | 臓器別 0/1 (or 0/1/2) 表 (行方向結合のみ)     |
 | `bs_<name>/`                        | `ingor` のブートストラップ結果                          |
 | `ecv_all/`, `ecv_all2/`             | 臓器ごとの ECv 個別ネットワーク                         |
 | `FastBN/`, `MatDNF/`, `ilp_bn/`, `pgmpy/` | 各バックエンドの実装                              |
