@@ -1,0 +1,38 @@
+# ScanpyBNPreprocess pipeline configuration
+# Paths are resolved relative to this file.
+dataset:
+  mode: bbknn
+  target: bbknn
+  input: data/tabula-muris-senis-bbknn-processed-official-annotations.h5ad
+
+pipeline:
+  preprocess: true
+  aggregation: true
+  continuous: true
+  discrete: true
+
+preprocess:
+  output_dir: data01_bbknn
+
+aggregation:
+  method: resample       # resample | pseudo_bulk
+  level: batch           # tissue | age | batch
+  workers: 4
+  input_glob: data01_bbknn/*.txt
+  output_dir: data02_bbknn_r_batch
+  resample:
+    count: 10
+    size: same           # same | root
+
+continuous:
+  transpose_output_dir: data02_bbknn_r_batch_t
+  merge_output: data03_bbknn_r_batch_t/all.txt
+  min_variance: 0.0
+
+discrete:
+  merge_output: data03_bbknn_r_batch/all.txt
+  min_variance: 0.0
+  discretize_output_dir: data03_bbknn_r_batch
+  min_entropy: 0.0
+  prepare_output_dir: data04_bbknn_r_batch_disc
+

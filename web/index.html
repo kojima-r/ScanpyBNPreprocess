@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scanpy BN Preprocess</title>
+  <style>
+    :root { --ink:#17201c; --muted:#65726a; --paper:#f6f3eb; --card:#fffef9; --line:#d7d8ce; --green:#176b51; --green2:#dfeee7; --red:#a43a31; --shadow:0 12px 38px #25382e16; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:radial-gradient(circle at 5% 0,#e5eee7,transparent 32rem),var(--paper); font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif; }
+    header { max-width:1240px; margin:auto; padding:42px 24px 20px; display:flex; justify-content:space-between; align-items:end; gap:24px; }
+    h1 { margin:0; font-family:Georgia,"Yu Mincho",serif; font-size:clamp(30px,4vw,51px); font-weight:500; letter-spacing:-.03em; }
+    .sub { color:var(--muted); margin-top:8px; }
+    .status { border:1px solid var(--line); background:#ffffffb8; border-radius:99px; padding:9px 14px; font-size:14px; white-space:nowrap; }
+    .dot { display:inline-block; width:9px; height:9px; background:#929b95; border-radius:50%; margin-right:7px; }
+    .running .dot { background:#24a473; box-shadow:0 0 0 5px #24a47320; }
+    main { max-width:1240px; margin:auto; padding:12px 24px 52px; display:grid; grid-template-columns:minmax(0,1.1fr) minmax(340px,.9fr); gap:20px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow); overflow:hidden; }
+    .card-head { padding:20px 22px 15px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
+    h2 { margin:0; font-size:17px; }
+    .body { padding:20px 22px 23px; }
+    fieldset { border:0; padding:0; margin:0 0 26px; }
+    legend { font-weight:700; margin-bottom:12px; }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px; }
+    .wide { grid-column:1/-1; }
+    label { display:grid; gap:6px; font-size:12px; color:var(--muted); }
+    input,select { width:100%; border:1px solid #c9cdc6; border-radius:9px; padding:10px 11px; background:white; color:var(--ink); font:inherit; }
+    input:focus,select:focus { outline:3px solid #1c795329; border-color:var(--green); }
+    .checks { display:grid; grid-template-columns:repeat(2,1fr); gap:9px; }
+    .check { display:flex; align-items:center; gap:9px; border:1px solid var(--line); border-radius:9px; padding:10px; color:var(--ink); font-size:13px; }
+    .check input { width:auto; accent-color:var(--green); }
+    button { border:0; border-radius:9px; padding:10px 15px; font-weight:700; cursor:pointer; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    .primary { color:white; background:var(--green); }
+    .secondary { color:var(--green); background:var(--green2); }
+    .danger { color:var(--red); background:#f7e4e1; }
+    .actions { display:flex; flex-wrap:wrap; gap:9px; }
+    #message { min-height:20px; margin-top:13px; font-size:13px; color:var(--green); white-space:pre-wrap; }
+    #message.error { color:var(--red); }
+    .right { display:grid; align-content:start; gap:20px; min-width:0; }
+    pre { margin:0; padding:18px; background:#17201c; color:#dae9df; min-height:420px; max-height:68vh; overflow:auto; font:12px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace; white-space:pre-wrap; word-break:break-word; }
+    .plan { color:var(--muted); font-size:12px; padding:14px 18px; max-height:220px; overflow:auto; }
+    .stage { padding:7px 0; border-bottom:1px dashed var(--line); }
+    @media(max-width:850px) { main{grid-template-columns:1fr} header{align-items:start;flex-direction:column}.grid{grid-template-columns:1fr}.wide{grid-column:auto} }
+  </style>
+</head>
+<body>
+  <header>
+    <div><h1>Preprocess Console</h1><div class="sub">config.yaml を編集して、single-cell RNA-seq 前処理を実行します。</div></div>
+    <div id="status" class="status"><span class="dot"></span><span>待機中</span></div>
+  </header>
+  <main>
+    <section class="card">
+      <div class="card-head"><h2>Pipeline configuration</h2><span id="configPath" class="sub"></span></div>
+      <form id="form" class="body">
+        <fieldset><legend>データセット</legend><div class="grid">
+          <label>Mode<select data-path="dataset.mode"><option>bbknn</option><option>facs</option><option>droplet</option></select></label>
+          <label>Target<input data-path="dataset.target"></label>
+          <label class="wide">入力 h5ad<input data-path="dataset.input"></label>
+          <label class="wide">Step 01 出力<input data-path="preprocess.output_dir"></label>
+        </div></fieldset>
+        <fieldset><legend>実行ステップ</legend><div class="checks">
+          <label class="check"><input type="checkbox" data-path="pipeline.preprocess">01 Preprocess</label>
+          <label class="check"><input type="checkbox" data-path="pipeline.aggregation">02 Aggregate</label>
+          <label class="check"><input type="checkbox" data-path="pipeline.continuous">連続値経路</label>
+          <label class="check"><input type="checkbox" data-path="pipeline.discrete">離散値経路</label>
+        </div></fieldset>
+        <fieldset><legend>集約</legend><div class="grid">
+          <label>方式<select data-path="aggregation.method"><option value="resample">Resample</option><option value="pseudo_bulk">Pseudo-bulk</option></select></label>
+          <label>階層<select data-path="aggregation.level"><option>tissue</option><option>age</option><option>batch</option></select></label>
+          <label>Workers<input type="number" min="1" data-path="aggregation.workers" data-type="number"></label>
+          <label>Resample 回数<input type="number" min="1" data-path="aggregation.resample.count" data-type="number"></label>
+          <label>Resample size<select data-path="aggregation.resample.size"><option>same</option><option>root</option></select></label>
+          <label class="wide">入力 glob<input data-path="aggregation.input_glob"></label>
+          <label class="wide">出力ディレクトリ<input data-path="aggregation.output_dir"></label>
+        </div></fieldset>
+        <fieldset><legend>連続値経路</legend><div class="grid">
+          <label class="wide">Transpose 出力<input data-path="continuous.transpose_output_dir"></label>
+          <label class="wide">Merge 出力<input data-path="continuous.merge_output"></label>
+          <label>最小分散<input type="number" min="0" step="any" data-path="continuous.min_variance" data-type="number"></label>
+        </div></fieldset>
+        <fieldset><legend>離散値経路</legend><div class="grid">
+          <label class="wide">Merge 出力<input data-path="discrete.merge_output"></label>
+          <label>最小分散<input type="number" min="0" step="any" data-path="discrete.min_variance" data-type="number"></label>
+          <label>最小 entropy<input type="number" min="0" step="any" data-path="discrete.min_entropy" data-type="number"></label>
+          <label class="wide">Discretize 出力<input data-path="discrete.discretize_output_dir"></label>
+          <label class="wide">Prepare 出力<input data-path="discrete.prepare_output_dir"></label>
+        </div></fieldset>
+        <div class="actions"><button class="secondary" type="button" id="save">設定を保存・検証</button><button class="primary" type="button" id="run">保存して実行</button><button class="danger" type="button" id="stop">停止</button></div>
+        <div id="message"></div>
+      </form>
+    </section>
+    <aside class="right">
+      <section class="card"><div class="card-head"><h2>実行計画</h2><button class="secondary" type="button" id="refreshPlan">更新</button></div><div id="plan" class="plan">読み込み中…</div></section>
+      <section class="card"><div class="card-head"><h2>実行ログ</h2><span class="sub">末尾 200 KB</span></div><pre id="log">まだ実行されていません。</pre></section>
+    </aside>
+  </main>
+<script>
+let config = {};
+const $ = s => document.querySelector(s);
+const controls = () => [...document.querySelectorAll('[data-path]')];
+function getPath(obj,path){ return path.split('.').reduce((v,k)=>v?.[k],obj); }
+function setPath(obj,path,value){ const p=path.split('.'); let x=obj; p.slice(0,-1).forEach(k=>x=x[k]??=( {} )); x[p.at(-1)]=value; }
+function show(msg,error=false){ $('#message').textContent=msg; $('#message').className=error?'error':''; }
+function fill(){ controls().forEach(el=>{ const v=getPath(config,el.dataset.path); if(el.type==='checkbox')el.checked=!!v; else el.value=v??''; }); }
+function collect(){ controls().forEach(el=>{ let v=el.type==='checkbox'?el.checked:el.value; if(el.dataset.type==='number')v=Number(v); setPath(config,el.dataset.path,v); }); return config; }
+async function request(url,options={}){ const r=await fetch(url,{headers:{'Content-Type':'application/json'},...options}); const data=await r.json(); if(!r.ok)throw new Error(data.error||r.statusText); return data; }
+async function load(){ try{ const d=await request('/api/config'); config=d.config; $('#configPath').textContent=d.path; fill(); await plan(); }catch(e){show(e.message,true);} }
+async function save(){ collect(); const d=await request('/api/config',{method:'PUT',body:JSON.stringify({config})}); config=d.config; fill(); show('config.yaml を保存し、検証しました。'); await plan(); }
+async function plan(){ try{ const d=await request('/api/plan'); $('#plan').innerHTML=d.plan.map((x,i)=>`<div class="stage"><b>${i+1}. ${escapeHtml(x.stage)}</b><br>${escapeHtml(x.command.join(' '))}</div>`).join(''); }catch(e){ $('#plan').textContent=e.message; } }
+function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+$('#save').onclick=()=>save().catch(e=>show(e.message,true));
+$('#run').onclick=async()=>{ try{ await save(); await request('/api/run',{method:'POST',body:'{}'}); show('パイプラインを開始しました。'); await status(); }catch(e){show(e.message,true);} };
+$('#stop').onclick=()=>request('/api/stop',{method:'POST',body:'{}'}).then(()=>show('停止シグナルを送りました。')).catch(e=>show(e.message,true));
+$('#refreshPlan').onclick=plan;
+async function status(){ try{ const d=await request('/api/status'); const s=$('#status'); s.classList.toggle('running',d.running); s.querySelector('span:last-child').textContent=d.running?`実行中 (PID ${d.pid})`:d.returncode===0?'完了':d.returncode==null?'待機中':`終了 (code ${d.returncode})`; $('#run').disabled=d.running; $('#stop').disabled=!d.running; if(d.log) { const el=$('#log'); const nearBottom=el.scrollHeight-el.scrollTop-el.clientHeight<70; el.textContent=d.log; if(nearBottom)el.scrollTop=el.scrollHeight; } }catch(e){show(e.message,true);} }
+load(); status(); setInterval(status,1500);
+</script>
+</body>
+</html>
