@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class PipelineIntegrationTest(unittest.TestCase):
-    def test_pseudo_bulk_continuous_and_discrete_branches(self):
+    def test_pseudo_bulk_discrete_pipeline(self):
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
             inputs = base / "input"
@@ -31,13 +31,12 @@ class PipelineIntegrationTest(unittest.TestCase):
                 encoding="utf-8",
             )
             config = {
-                "dataset": {"mode": "bbknn", "target": "toy"},
-                "pipeline": {"preprocess": False, "aggregation": True, "continuous": True, "discrete": True},
+                "dataset": {"family": "tms", "mode": "bbknn", "target": "toy"},
+                "pipeline": {"preprocess": False, "aggregation": True, "discrete": True},
                 "aggregation": {
                     "method": "pseudo_bulk", "level": "age", "workers": 1,
                     "input_glob": "input/*.txt", "output_dir": "aggregated",
                 },
-                "continuous": {"transpose_output_dir": "transposed", "merge_output": "continuous/all.txt"},
                 "discrete": {
                     "merge_output": "discrete/all.txt", "discretize_output_dir": "discrete",
                     "prepare_output_dir": "prepared",
@@ -51,7 +50,6 @@ class PipelineIntegrationTest(unittest.TestCase):
                 cwd=ROOT, text=True, capture_output=True,
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertTrue((base / "continuous/all.txt").exists())
             self.assertTrue((base / "prepared/all_disc.tsv").exists())
             binary = pd.read_csv(base / "prepared/all_disc.tsv", sep="\t")
             self.assertEqual(list(binary.columns), ["G1", "G2"])

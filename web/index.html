@@ -3,118 +3,113 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Scanpy BN Preprocess</title>
+  <title>Scanpy BN Pipeline Console</title>
   <style>
-    :root { --ink:#17201c; --muted:#65726a; --paper:#f6f3eb; --card:#fffef9; --line:#d7d8ce; --green:#176b51; --green2:#dfeee7; --red:#a43a31; --shadow:0 12px 38px #25382e16; }
-    * { box-sizing:border-box; }
-    body { margin:0; color:var(--ink); background:radial-gradient(circle at 5% 0,#e5eee7,transparent 32rem),var(--paper); font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif; }
-    header { max-width:1240px; margin:auto; padding:42px 24px 20px; display:flex; justify-content:space-between; align-items:end; gap:24px; }
-    h1 { margin:0; font-family:Georgia,"Yu Mincho",serif; font-size:clamp(30px,4vw,51px); font-weight:500; letter-spacing:-.03em; }
-    .sub { color:var(--muted); margin-top:8px; }
-    .status { border:1px solid var(--line); background:#ffffffb8; border-radius:99px; padding:9px 14px; font-size:14px; white-space:nowrap; }
-    .dot { display:inline-block; width:9px; height:9px; background:#929b95; border-radius:50%; margin-right:7px; }
-    .running .dot { background:#24a473; box-shadow:0 0 0 5px #24a47320; }
-    main { max-width:1240px; margin:auto; padding:12px 24px 52px; display:grid; grid-template-columns:minmax(0,1.1fr) minmax(340px,.9fr); gap:20px; }
-    .card { background:var(--card); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow); overflow:hidden; }
-    .card-head { padding:20px 22px 15px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
-    h2 { margin:0; font-size:17px; }
-    .body { padding:20px 22px 23px; }
-    fieldset { border:0; padding:0; margin:0 0 26px; }
-    legend { font-weight:700; margin-bottom:12px; }
-    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px; }
-    .wide { grid-column:1/-1; }
-    label { display:grid; gap:6px; font-size:12px; color:var(--muted); }
-    input,select { width:100%; border:1px solid #c9cdc6; border-radius:9px; padding:10px 11px; background:white; color:var(--ink); font:inherit; }
-    input:focus,select:focus { outline:3px solid #1c795329; border-color:var(--green); }
-    .checks { display:grid; grid-template-columns:repeat(2,1fr); gap:9px; }
-    .check { display:flex; align-items:center; gap:9px; border:1px solid var(--line); border-radius:9px; padding:10px; color:var(--ink); font-size:13px; }
-    .check input { width:auto; accent-color:var(--green); }
-    button { border:0; border-radius:9px; padding:10px 15px; font-weight:700; cursor:pointer; }
-    button:disabled { opacity:.45; cursor:not-allowed; }
-    .primary { color:white; background:var(--green); }
-    .secondary { color:var(--green); background:var(--green2); }
-    .danger { color:var(--red); background:#f7e4e1; }
-    .actions { display:flex; flex-wrap:wrap; gap:9px; }
-    #message { min-height:20px; margin-top:13px; font-size:13px; color:var(--green); white-space:pre-wrap; }
-    #message.error { color:var(--red); }
-    .right { display:grid; align-content:start; gap:20px; min-width:0; }
-    pre { margin:0; padding:18px; background:#17201c; color:#dae9df; min-height:420px; max-height:68vh; overflow:auto; font:12px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace; white-space:pre-wrap; word-break:break-word; }
-    .plan { color:var(--muted); font-size:12px; padding:14px 18px; max-height:220px; overflow:auto; }
-    .stage { padding:7px 0; border-bottom:1px dashed var(--line); }
-    @media(max-width:850px) { main{grid-template-columns:1fr} header{align-items:start;flex-direction:column}.grid{grid-template-columns:1fr}.wide{grid-column:auto} }
+    :root{--ink:#17201c;--muted:#65726a;--paper:#f4f2eb;--card:#fffef9;--line:#d7d8ce;--green:#176b51;--green2:#dfeee7;--blue:#315b87;--red:#a43a31;--amber:#9a6715;--shadow:0 12px 38px #25382e14}
+    *{box-sizing:border-box}body{margin:0;color:var(--ink);background:radial-gradient(circle at 5% 0,#e1ece5,transparent 34rem),var(--paper);font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif}
+    header{max-width:1420px;margin:auto;padding:34px 24px 18px;display:flex;justify-content:space-between;align-items:end;gap:24px}
+    h1{margin:0;font-family:Georgia,"Yu Mincho",serif;font-size:clamp(30px,4vw,49px);font-weight:500;letter-spacing:-.03em}h2,h3{margin:0}h2{font-size:17px}.sub,.muted{color:var(--muted)}.sub{margin-top:7px;font-size:13px}
+    .status-pill{border:1px solid var(--line);background:#ffffffc9;border-radius:99px;padding:10px 15px;font-size:14px;white-space:nowrap}.dot{display:inline-block;width:9px;height:9px;background:#929b95;border-radius:50%;margin-right:7px}.running .dot{background:#24a473;box-shadow:0 0 0 5px #24a47320}.failed .dot{background:var(--red)}
+    main{max-width:1420px;margin:auto;padding:12px 24px 52px;display:grid;gap:20px}.top{display:grid;grid-template-columns:minmax(500px,1.05fr) minmax(420px,.95fr);gap:20px;align-items:start}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;min-width:0}.card-head{min-height:58px;padding:17px 21px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px}.body{padding:20px 21px 23px}
+    fieldset{border:0;padding:0;margin:0 0 25px}legend{font-weight:750;margin-bottom:11px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.wide{grid-column:1/-1}label{display:grid;gap:6px;font-size:12px;color:var(--muted)}
+    input,select{width:100%;border:1px solid #c9cdc6;border-radius:9px;padding:9px 10px;background:white;color:var(--ink);font:inherit}input:focus,select:focus{outline:3px solid #1c795329;border-color:var(--green)}
+    .checks{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.check{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:10px;color:var(--ink);font-size:13px}.check input{width:auto;accent-color:var(--green)}
+    button,.button{border:0;border-radius:9px;padding:9px 13px;font-weight:700;cursor:pointer;font:inherit;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}button:disabled{opacity:.45;cursor:not-allowed}.primary{color:white;background:var(--green)}.secondary{color:var(--green);background:var(--green2)}.quiet{color:var(--ink);background:#efeee7}.danger{color:var(--red);background:#f7e4e1}.actions{display:flex;flex-wrap:wrap;gap:9px}
+    #message{min-height:20px;margin-top:12px;font-size:13px;color:var(--green);white-space:pre-wrap}#message.error{color:var(--red)}.dashboard{display:grid;gap:20px}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.metric{border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}.metric span{display:block;color:var(--muted);font-size:11px;margin-bottom:5px}.metric strong{display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .progress{height:9px;background:#e5e5dc;border-radius:99px;overflow:hidden;margin:17px 0 8px}.progress>div{height:100%;width:0;background:linear-gradient(90deg,var(--green),#43a879);transition:width .3s}.stage-list{display:grid;gap:8px;margin-top:15px}.stage-row{display:grid;grid-template-columns:24px 1fr auto;gap:9px;align-items:center;padding:9px 10px;border:1px solid var(--line);border-radius:10px;font-size:12px}.stage-icon{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:#e9e9e2;font-size:10px}.stage-row.succeeded .stage-icon{color:white;background:var(--green)}.stage-row.running .stage-icon{color:white;background:var(--blue)}.stage-row.failed .stage-icon{color:white;background:var(--red)}
+    .plan{color:var(--muted);font-size:12px;max-height:230px;overflow:auto}.plan-stage{padding:9px 0;border-bottom:1px dashed var(--line);word-break:break-all}.workspace{display:grid;grid-template-columns:minmax(390px,.7fr) minmax(500px,1.3fr);gap:20px;align-items:start}
+    .table-wrap{overflow:auto;max-height:620px}table{width:100%;border-collapse:collapse;font-size:12px}th{position:sticky;top:0;background:#f4f3ed;text-align:left;color:var(--muted);font-weight:650;z-index:1}th,td{padding:10px 11px;border-bottom:1px solid var(--line);vertical-align:middle}tr.selectable{cursor:pointer}tr.selectable:hover,tr.selected{background:#edf5f0}
+    .badge{display:inline-block;border-radius:99px;padding:4px 8px;font-weight:700;font-size:10px;background:#e9e9e2;white-space:nowrap}.badge.succeeded{color:var(--green);background:var(--green2)}.badge.running,.badge.starting,.badge.stopping{color:var(--blue);background:#e3edf7}.badge.failed,.badge.interrupted{color:var(--red);background:#f7e4e1}.badge.stopped{color:var(--amber);background:#f6edda}
+    .detail-tabs{display:flex;gap:7px;padding:12px 18px 0}.tab.active{color:white;background:var(--green)}.tab-panel{display:none}.tab-panel.active{display:block}pre{margin:0;padding:17px 19px;background:#17201c;color:#dae9df;min-height:410px;max-height:66vh;overflow:auto;font:12px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+    .result-tools{display:grid;grid-template-columns:1fr auto;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}.result-list{max-height:590px;overflow:auto}.result-row{display:grid;grid-template-columns:90px minmax(0,1fr) 88px 70px;gap:10px;align-items:center;padding:10px 18px;border-bottom:1px solid var(--line);font-size:12px}.result-path{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fresh{color:var(--green);font-weight:700}.empty{padding:28px;text-align:center;color:var(--muted)}.history-actions{display:flex;gap:6px}.tiny{padding:6px 8px;font-size:11px}
+    @media(max-width:1050px){.top,.workspace{grid-template-columns:1fr}}@media(max-width:650px){header{align-items:start;flex-direction:column}.grid{grid-template-columns:1fr}.wide{grid-column:auto}.checks{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}.result-row{grid-template-columns:70px minmax(0,1fr) 65px}.result-row .modified{display:none}}
   </style>
 </head>
 <body>
-  <header>
-    <div><h1>Preprocess Console</h1><div class="sub">config.yaml を編集して、single-cell RNA-seq 前処理を実行します。</div></div>
-    <div id="status" class="status"><span class="dot"></span><span>待機中</span></div>
-  </header>
+  <header><div><h1>Pipeline Console</h1><div class="sub">設定、実行、進捗、ログ、結果を一か所で管理します。</div></div><div id="statusPill" class="status-pill"><span class="dot"></span><span>待機中</span></div></header>
   <main>
-    <section class="card">
-      <div class="card-head"><h2>Pipeline configuration</h2><span id="configPath" class="sub"></span></div>
-      <form id="form" class="body">
-        <fieldset><legend>データセット</legend><div class="grid">
-          <label>Mode<select data-path="dataset.mode"><option>bbknn</option><option>facs</option><option>droplet</option></select></label>
-          <label>Target<input data-path="dataset.target"></label>
-          <label class="wide">入力 h5ad<input data-path="dataset.input"></label>
-          <label class="wide">Step 01 出力<input data-path="preprocess.output_dir"></label>
-        </div></fieldset>
-        <fieldset><legend>実行ステップ</legend><div class="checks">
-          <label class="check"><input type="checkbox" data-path="pipeline.preprocess">01 Preprocess</label>
-          <label class="check"><input type="checkbox" data-path="pipeline.aggregation">02 Aggregate</label>
-          <label class="check"><input type="checkbox" data-path="pipeline.continuous">連続値経路</label>
-          <label class="check"><input type="checkbox" data-path="pipeline.discrete">離散値経路</label>
-        </div></fieldset>
-        <fieldset><legend>集約</legend><div class="grid">
-          <label>方式<select data-path="aggregation.method"><option value="resample">Resample</option><option value="pseudo_bulk">Pseudo-bulk</option></select></label>
-          <label>階層<select data-path="aggregation.level"><option>tissue</option><option>age</option><option>batch</option></select></label>
-          <label>Workers<input type="number" min="1" data-path="aggregation.workers" data-type="number"></label>
-          <label>Resample 回数<input type="number" min="1" data-path="aggregation.resample.count" data-type="number"></label>
-          <label>Resample size<select data-path="aggregation.resample.size"><option>same</option><option>root</option></select></label>
-          <label class="wide">入力 glob<input data-path="aggregation.input_glob"></label>
-          <label class="wide">出力ディレクトリ<input data-path="aggregation.output_dir"></label>
-        </div></fieldset>
-        <fieldset><legend>連続値経路</legend><div class="grid">
-          <label class="wide">Transpose 出力<input data-path="continuous.transpose_output_dir"></label>
-          <label class="wide">Merge 出力<input data-path="continuous.merge_output"></label>
-          <label>最小分散<input type="number" min="0" step="any" data-path="continuous.min_variance" data-type="number"></label>
-        </div></fieldset>
-        <fieldset><legend>離散値経路</legend><div class="grid">
-          <label class="wide">Merge 出力<input data-path="discrete.merge_output"></label>
-          <label>最小分散<input type="number" min="0" step="any" data-path="discrete.min_variance" data-type="number"></label>
-          <label>最小 entropy<input type="number" min="0" step="any" data-path="discrete.min_entropy" data-type="number"></label>
-          <label class="wide">Discretize 出力<input data-path="discrete.discretize_output_dir"></label>
-          <label class="wide">Prepare 出力<input data-path="discrete.prepare_output_dir"></label>
-        </div></fieldset>
-        <div class="actions"><button class="secondary" type="button" id="save">設定を保存・検証</button><button class="primary" type="button" id="run">保存して実行</button><button class="danger" type="button" id="stop">停止</button></div>
-        <div id="message"></div>
-      </form>
-    </section>
-    <aside class="right">
-      <section class="card"><div class="card-head"><h2>実行計画</h2><button class="secondary" type="button" id="refreshPlan">更新</button></div><div id="plan" class="plan">読み込み中…</div></section>
-      <section class="card"><div class="card-head"><h2>実行ログ</h2><span class="sub">末尾 200 KB</span></div><pre id="log">まだ実行されていません。</pre></section>
-    </aside>
+    <div class="top">
+      <section class="card">
+        <div class="card-head"><h2>Pipeline configuration</h2><span id="configPath" class="sub"></span></div>
+        <form id="form" class="body">
+          <fieldset><legend>データセット</legend><div class="grid">
+            <label>Dataset<select data-path="dataset.family" id="family"><option value="tms">TMS</option><option value="tsp">TSP</option></select></label>
+            <label>Mode<select data-path="dataset.mode" id="mode"></select></label>
+            <label>Target<input data-path="dataset.target"></label>
+            <label class="wide">入力 h5ad / glob<input data-path="dataset.input"></label>
+            <label class="wide">Step 01 出力<input data-path="preprocess.output_dir"></label>
+          </div></fieldset>
+          <fieldset><legend>実行ステップ</legend><div class="checks">
+            <label class="check"><input type="checkbox" data-path="pipeline.preprocess">01 Preprocess</label>
+            <label class="check"><input type="checkbox" data-path="pipeline.aggregation">02 Aggregate</label>
+            <label class="check"><input type="checkbox" data-path="pipeline.discrete">04–06 Discrete</label>
+          </div></fieldset>
+          <fieldset><legend>集約</legend><div class="grid">
+            <label>方式<select data-path="aggregation.method"><option value="resample">Resample</option><option value="pseudo_bulk">Pseudo-bulk</option></select></label>
+            <label>階層<select data-path="aggregation.level"><option>tissue</option><option>age</option><option>batch</option></select></label>
+            <label>Workers<input type="number" min="1" data-path="aggregation.workers" data-type="number"></label>
+            <label>Resample 回数<input type="number" min="1" data-path="aggregation.resample.count" data-type="number"></label>
+            <label>Resample size<select data-path="aggregation.resample.size"><option>same</option><option>root</option></select></label>
+            <label class="wide">入力 glob<input data-path="aggregation.input_glob"></label>
+            <label class="wide">出力ディレクトリ<input data-path="aggregation.output_dir"></label>
+          </div></fieldset>
+          <fieldset><legend>離散値経路</legend><div class="grid">
+            <label class="wide">Merge 出力<input data-path="discrete.merge_output"></label>
+            <label>最小分散<input type="number" min="0" step="any" data-path="discrete.min_variance" data-type="number"></label>
+            <label>最小 entropy<input type="number" min="0" step="any" data-path="discrete.min_entropy" data-type="number"></label>
+            <label class="wide">Discretize 出力<input data-path="discrete.discretize_output_dir"></label>
+            <label class="wide">Prepare 出力<input data-path="discrete.prepare_output_dir"></label>
+          </div></fieldset>
+          <div class="actions"><button class="secondary" type="button" id="save">設定を保存・検証</button><button class="primary" type="button" id="run">保存して実行</button><button class="danger" type="button" id="stop">停止</button></div><div id="message"></div>
+        </form>
+      </section>
+      <aside class="dashboard">
+        <section class="card"><div class="card-head"><h2>現在の実行</h2><span id="currentId" class="muted">—</span></div><div class="body">
+          <div class="metrics"><div class="metric"><span>状態</span><strong id="currentStatus">待機中</strong></div><div class="metric"><span>現在の段階</span><strong id="currentStage">—</strong></div><div class="metric"><span>経過時間</span><strong id="elapsed">—</strong></div><div class="metric"><span>結果</span><strong id="resultCount">0 files</strong></div></div>
+          <div class="progress"><div id="progressBar"></div></div><div class="sub" id="progressText">実行履歴はまだありません。</div><div id="stages" class="stage-list"></div>
+        </div></section>
+        <section class="card"><div class="card-head"><h2>実行計画</h2><button class="secondary tiny" type="button" id="refreshPlan">更新</button></div><div id="plan" class="body plan">読み込み中…</div></section>
+      </aside>
+    </div>
+    <div class="workspace">
+      <section class="card"><div class="card-head"><div><h2>実行履歴</h2><div class="sub">設定スナップショットとログを永続保存</div></div><button class="secondary tiny" id="refreshRuns">更新</button></div><div class="table-wrap"><table><thead><tr><th>開始</th><th>対象</th><th>状態</th><th>進捗</th><th></th></tr></thead><tbody id="runRows"></tbody></table></div></section>
+      <section class="card">
+        <div class="card-head"><div><h2 id="detailTitle">実行詳細</h2><div class="sub" id="detailSub">履歴を選択してください。</div></div><div class="actions"><a id="downloadLog" class="button quiet tiny" href="#" hidden>ログ保存</a><button id="refreshResults" class="secondary tiny" hidden>結果を再読込</button></div></div>
+        <div class="detail-tabs"><button class="tab active quiet tiny" data-tab="logPanel">ログ</button><button class="tab quiet tiny" data-tab="resultsPanel">結果ファイル</button><button class="tab quiet tiny" data-tab="stagesPanel">段階</button></div>
+        <div id="logPanel" class="tab-panel active"><pre id="log">まだ実行されていません。</pre></div>
+        <div id="resultsPanel" class="tab-panel"><div class="result-tools"><input id="resultSearch" placeholder="パス、グループで絞り込み"><span id="resultSummary" class="muted"></span></div><div id="results" class="result-list"><div class="empty">結果はまだありません。</div></div></div>
+        <div id="stagesPanel" class="tab-panel"><div id="detailStages" class="body stage-list"><div class="empty">段階情報はありません。</div></div></div>
+      </section>
+    </div>
   </main>
 <script>
-let config = {};
-const $ = s => document.querySelector(s);
-const controls = () => [...document.querySelectorAll('[data-path]')];
-function getPath(obj,path){ return path.split('.').reduce((v,k)=>v?.[k],obj); }
-function setPath(obj,path,value){ const p=path.split('.'); let x=obj; p.slice(0,-1).forEach(k=>x=x[k]??=( {} )); x[p.at(-1)]=value; }
-function show(msg,error=false){ $('#message').textContent=msg; $('#message').className=error?'error':''; }
-function fill(){ controls().forEach(el=>{ const v=getPath(config,el.dataset.path); if(el.type==='checkbox')el.checked=!!v; else el.value=v??''; }); }
-function collect(){ controls().forEach(el=>{ let v=el.type==='checkbox'?el.checked:el.value; if(el.dataset.type==='number')v=Number(v); setPath(config,el.dataset.path,v); }); return config; }
-async function request(url,options={}){ const r=await fetch(url,{headers:{'Content-Type':'application/json'},...options}); const data=await r.json(); if(!r.ok)throw new Error(data.error||r.statusText); return data; }
-async function load(){ try{ const d=await request('/api/config'); config=d.config; $('#configPath').textContent=d.path; fill(); await plan(); }catch(e){show(e.message,true);} }
-async function save(){ collect(); const d=await request('/api/config',{method:'PUT',body:JSON.stringify({config})}); config=d.config; fill(); show('config.yaml を保存し、検証しました。'); await plan(); }
-async function plan(){ try{ const d=await request('/api/plan'); $('#plan').innerHTML=d.plan.map((x,i)=>`<div class="stage"><b>${i+1}. ${escapeHtml(x.stage)}</b><br>${escapeHtml(x.command.join(' '))}</div>`).join(''); }catch(e){ $('#plan').textContent=e.message; } }
-function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
-$('#save').onclick=()=>save().catch(e=>show(e.message,true));
-$('#run').onclick=async()=>{ try{ await save(); await request('/api/run',{method:'POST',body:'{}'}); show('パイプラインを開始しました。'); await status(); }catch(e){show(e.message,true);} };
-$('#stop').onclick=()=>request('/api/stop',{method:'POST',body:'{}'}).then(()=>show('停止シグナルを送りました。')).catch(e=>show(e.message,true));
-$('#refreshPlan').onclick=plan;
-async function status(){ try{ const d=await request('/api/status'); const s=$('#status'); s.classList.toggle('running',d.running); s.querySelector('span:last-child').textContent=d.running?`実行中 (PID ${d.pid})`:d.returncode===0?'完了':d.returncode==null?'待機中':`終了 (code ${d.returncode})`; $('#run').disabled=d.running; $('#stop').disabled=!d.running; if(d.log) { const el=$('#log'); const nearBottom=el.scrollHeight-el.scrollTop-el.clientHeight<70; el.textContent=d.log; if(nearBottom)el.scrollTop=el.scrollHeight; } }catch(e){show(e.message,true);} }
-load(); status(); setInterval(status,1500);
+let config={},currentRun=null,selectedRun=null,runs=[];
+const $=s=>document.querySelector(s),controls=()=>[...document.querySelectorAll('[data-path]')],modeOptions={tms:['bbknn','facs','droplet'],tsp:['10x','smartseq']};
+function getPath(o,p){return p.split('.').reduce((v,k)=>v?.[k],o)}function setPath(o,p,v){const a=p.split('.');let x=o;a.slice(0,-1).forEach(k=>x=x[k]??={});x[a.at(-1)]=v}
+function esc(s){const d=document.createElement('div');d.textContent=String(s??'');return d.innerHTML}function show(m,e=false){$('#message').textContent=m;$('#message').className=e?'error':''}
+function fmtTime(v){return v?new Date(v).toLocaleString('ja-JP'):'—'}function duration(v){if(v==null)return'—';const h=Math.floor(v/3600),m=Math.floor(v%3600/60),s=v%60;return h?h+'h '+m+'m':m?m+'m '+s+'s':s+'s'}
+function bytes(v){return v<1024?v+' B':v<1048576?(v/1024).toFixed(1)+' KB':v<1073741824?(v/1048576).toFixed(1)+' MB':(v/1073741824).toFixed(1)+' GB'}
+function statusLabel(s){return({starting:'開始中',running:'実行中',stopping:'停止中',succeeded:'完了',failed:'失敗',stopped:'停止済み',interrupted:'中断'}[s]||s||'待機中')}
+async function request(u,o={}){const r=await fetch(u,{headers:{'Content-Type':'application/json'},...o}),t=r.headers.get('content-type')||'',d=t.includes('json')?await r.json():{};if(!r.ok)throw new Error(d.error||r.statusText);return d}
+function syncModes(v){const f=$('#family').value,m=$('#mode'),s=v??m.value;m.innerHTML=modeOptions[f].map(x=>'<option value="'+x+'">'+x+'</option>').join('');m.value=modeOptions[f].includes(s)?s:modeOptions[f][0]}
+function fill(){$('#family').value=getPath(config,'dataset.family');syncModes(getPath(config,'dataset.mode'));controls().forEach(e=>{const v=getPath(config,e.dataset.path);if(e.type==='checkbox')e.checked=!!v;else e.value=v??''})}
+function collect(){controls().forEach(e=>{let v=e.type==='checkbox'?e.checked:e.value;if(e.dataset.type==='number')v=Number(v);setPath(config,e.dataset.path,v)});return config}
+async function loadConfig(){const d=await request('/api/config');config=d.config;$('#configPath').textContent=d.path;fill();await loadPlan()}
+async function save(){collect();const d=await request('/api/config',{method:'PUT',body:JSON.stringify({config})});config=d.config;fill();show('設定を保存し、検証しました。');await loadPlan()}
+async function loadPlan(){try{const d=await request('/api/plan');$('#plan').innerHTML=d.plan.map((x,i)=>'<div class="plan-stage"><b>'+(i+1)+'. '+esc(x.stage)+'</b><br>'+esc(x.command.join(' '))+'</div>').join('')}catch(e){$('#plan').textContent=e.message}}
+function stageRows(a=[]){return a.map(x=>'<div class="stage-row '+esc(x.status)+'"><span class="stage-icon">'+(x.status==='succeeded'?'✓':x.status==='running'?'▶':x.status==='failed'?'!':x.index)+'</span><span><b>'+esc(x.name)+'</b>'+(x.command?.length?'<div class="muted">'+esc(x.command.join(' '))+'</div>':'')+'</span><span class="muted">'+(x.elapsed_seconds!=null?duration(Math.round(x.elapsed_seconds)):statusLabel(x.status))+'</span></div>').join('')}
+function renderCurrent(r){currentRun=r;const p=$('#statusPill');p.className='status-pill '+(r?.running?'running':r?.status==='failed'?'failed':'');p.querySelector('span:last-child').textContent=r?.running?statusLabel(r.status)+' · '+(r.progress||0)+'%':statusLabel(r?.status);$('#currentId').textContent=r?.id||'—';$('#currentStatus').textContent=statusLabel(r?.status);$('#currentStage').textContent=r?.current_stage||'—';$('#elapsed').textContent=duration(r?.elapsed_seconds);$('#resultCount').textContent=(r?.result_count||0)+' files';$('#progressBar').style.width=(r?.progress||0)+'%';$('#progressText').textContent=r?(r.completed_stages||0)+' / '+(r.total_stages||0)+' stages · '+(r.dataset?.target||'')+' '+(r.dataset?.mode||''):'実行履歴はまだありません。';$('#stages').innerHTML=stageRows(r?.stages)||'';$('#run').disabled=!!r?.running;$('#stop').disabled=!r?.running}
+async function pollStatus(){try{const d=await request('/api/status');renderCurrent(d.run);if(d.run&&(!selectedRun||selectedRun.id===d.run.id)){const old=selectedRun,changed=old&&(old.status!==d.run.status||old.result_count!==d.run.result_count);selectedRun={...d.run,files:old?.files||[]};if(changed){await selectRun(d.run.id)}else{renderDetail(selectedRun)}}}catch(e){show(e.message,true)}}
+async function loadRuns(){const d=await request('/api/runs');runs=d.runs;renderRuns();if(!selectedRun&&runs.length)await selectRun(runs[0].id)}
+function renderRuns(){$('#runRows').innerHTML=runs.length?runs.map(r=>'<tr class="selectable '+(selectedRun?.id===r.id?'selected':'')+'" data-id="'+r.id+'"><td>'+esc(fmtTime(r.started_at))+'<div class="muted">'+esc(duration(r.elapsed_seconds))+'</div></td><td><b>'+esc(r.dataset?.target)+'</b><div class="muted">'+esc(r.dataset?.mode)+'</div></td><td><span class="badge '+esc(r.status)+'">'+esc(statusLabel(r.status))+'</span></td><td>'+(r.progress||0)+'%<div class="muted">'+(r.result_count||0)+' files</div></td><td><button class="danger tiny delete-run" data-id="'+r.id+'" title="履歴のみ削除">削除</button></td></tr>').join(''):'<tr><td colspan="5" class="empty">実行履歴はありません。</td></tr>';document.querySelectorAll('tr[data-id]').forEach(r=>r.onclick=e=>{if(!e.target.closest('.delete-run'))selectRun(r.dataset.id)});document.querySelectorAll('.delete-run').forEach(b=>b.onclick=e=>{e.stopPropagation();deleteRun(b.dataset.id)})}
+async function selectRun(id){try{const d=await request('/api/runs/'+encodeURIComponent(id));selectedRun=d.run;renderRuns();renderDetail(selectedRun)}catch(e){show(e.message,true)}}
+function renderDetail(r){$('#detailTitle').textContent='実行 '+r.id;$('#detailSub').textContent=fmtTime(r.started_at)+' · '+statusLabel(r.status)+' · '+duration(r.elapsed_seconds);$('#log').textContent=r.log||'ログはまだありません。';$('#detailStages').innerHTML=stageRows(r.stages)||'<div class="empty">段階情報はありません。</div>';$('#downloadLog').hidden=false;$('#downloadLog').href='/api/runs/'+encodeURIComponent(r.id)+'/log';$('#refreshResults').hidden=r.running;renderResults()}
+function renderResults(){const f=selectedRun?.files||[],q=$('#resultSearch').value.toLowerCase(),v=f.filter(x=>!q||x.path.toLowerCase().includes(q)||x.group.toLowerCase().includes(q));$('#resultSummary').textContent=v.length+' / '+f.length;$('#results').innerHTML=v.length?v.slice(0,1000).map(x=>'<div class="result-row"><span class="badge">'+esc(x.group)+'</span><span class="result-path '+(x.updated_in_run?'fresh':'')+'" title="'+esc(x.path)+'">'+esc(x.path)+'</span><span>'+esc(bytes(x.size))+'</span><a class="button secondary tiny" href="/api/runs/'+encodeURIComponent(selectedRun.id)+'/files/'+encodeURIComponent(x.id)+'">保存</a></div>').join(''):'<div class="empty">該当する結果ファイルはありません。</div>'}
+async function deleteRun(id){if(!confirm('この実行履歴（設定スナップショットとログ）を削除します。生成結果ファイルは削除されません。'))return;try{await request('/api/runs/'+encodeURIComponent(id),{method:'DELETE'});if(selectedRun?.id===id)selectedRun=null;await loadRuns();show('実行履歴を削除しました。結果ファイルは保持されています。')}catch(e){show(e.message,true)}}
+$('#family').onchange=()=>syncModes();$('#save').onclick=()=>save().catch(e=>show(e.message,true));$('#run').onclick=async()=>{try{await save();const d=await request('/api/run',{method:'POST',body:'{}'});selectedRun=d.run;show('実行 '+d.run.id+' を開始しました。');await pollStatus();await loadRuns()}catch(e){show(e.message,true)}};$('#stop').onclick=()=>request('/api/stop',{method:'POST',body:'{}'}).then(()=>{show('停止シグナルを送りました。');pollStatus()}).catch(e=>show(e.message,true));$('#refreshPlan').onclick=loadPlan;$('#refreshRuns').onclick=()=>loadRuns().catch(e=>show(e.message,true));
+$('#refreshResults').onclick=async()=>{if(!selectedRun)return;try{const d=await request('/api/runs/'+selectedRun.id+'/refresh-results',{method:'POST',body:'{}'});selectedRun=d.run;renderDetail(selectedRun);await loadRuns()}catch(e){show(e.message,true)}};$('#resultSearch').oninput=renderResults;document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===t));document.querySelectorAll('.tab-panel').forEach(x=>x.classList.toggle('active',x.id===t.dataset.tab))});
+async function init(){try{await loadConfig();await pollStatus();await loadRuns()}catch(e){show(e.message,true)}}init();setInterval(()=>{pollStatus();loadRuns().catch(e=>show(e.message,true))},2500);
 </script>
 </body>
 </html>

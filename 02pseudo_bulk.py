@@ -14,7 +14,7 @@ The first column of the output is the group key itself.
 
 --target controls the dataset slot in default I/O paths
 (data01_<target>/  ->  data02_<target>_p_<level>/). Defaults to bbknn;
-pass facs / tps / droplet (or any custom name) to switch pipelines.
+pass facs / tsp / droplet (or any custom name) to switch pipelines.
 """
 
 import argparse

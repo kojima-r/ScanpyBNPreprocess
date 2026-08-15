@@ -1,0 +1,32 @@
+# ScanpyBNPreprocess pipeline configuration
+# Paths are resolved relative to this file.
+dataset:
+  family: tsp
+  mode: 10x
+  target: 10x
+  input: data/Tabula_Sapiens*.h5ad
+
+pipeline:
+  preprocess: true
+  aggregation: true
+  discrete: true
+
+preprocess:
+  output_dir: data01_10x
+
+aggregation:
+  method: resample       # resample | pseudo_bulk
+  level: tissue          # tissue | age | batch
+  workers: 4
+  input_glob: data01_10x/*.txt
+  output_dir: data02_10x_r_tissue
+  resample:
+    count: 10
+    size: same           # same | root
+
+discrete:
+  merge_output: data03_10x_r_tissue/all.txt
+  min_variance: 0.0
+  discretize_output_dir: data03_10x_r_tissue
+  min_entropy: 0.0
+  prepare_output_dir: data04_10x_r_tissue_disc

@@ -12,7 +12,7 @@ Accepts either of the two layouts emitted by 04merge.py:
   samples × genes for discretization. Column headers from the
   merged file become @name values verbatim.
 
---target defaults to bbknn; pass facs / tps / droplet (or any custom
+--target defaults to bbknn; pass facs / tsp / droplet (or any custom
 name) to switch pipelines.
 
 For each gene column, compute the 0.1% and 75% quantiles and bin

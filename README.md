@@ -1,14 +1,15 @@
 # ScanpyBNPreprocess
 
-[Tabula Muris Senis](https://tabula-muris-senis.ds.czbiohub.org/) のシングルセル RNA-seq データを前処理し、複数のベイジアンネットワーク (BN) 推定バックエンドに流し込むためのパイプラインです。
+[TMS: Tabula Muris Senis](https://tabula-muris-senis.ds.czbiohub.org/) および[TSP: Tabula Sapiens](https://tabula-sapiens.sf.czbiohub.org/whereisthedata)  のシングルセル RNA-seq データを前処理し、複数のベイジアンネットワーク (BN) 推定バックエンドに流し込むためのパイプラインです。
 
 対応している入力データ:
-
-| mode      | 説明 |
-| --------- | ---- |
-| `bbknn`   | FACS と droplet を統合し BBKNN (Batch Balanced k-Nearest Neighbors) でバッチ補正した統合データ |
-| `facs`    | FACS (Fluorescence-Activated Cell Sorting) 方式 |
-| `droplet` | ドロップレット方式 |
+| mode            | 説明 |
+| --------------- | ---- |
+| `bbknn`(TMS)    | FACS と droplet を統合し BBKNN (Batch Balanced k-Nearest Neighbors) でバッチ補正した統合データ |
+| `facs`(TMS)     | FACS (Fluorescence-Activated Cell Sorting) 方式 |
+| `droplet`(TMS)  | ドロップレット方式 |
+| `10x`(TSP)      | 10x Genomics' scRNA-seq  |
+| `smartseq`(TSP) | smartseq方式 |
 
 対応している BN 推定バックエンド (5 種):
 
@@ -25,27 +26,88 @@
 ## 0. データのダウンロード
 
 ```sh
-mkdir -p data
-wget --content-disposition https://ndownloader.figshare.com/files/23936555 \
-     -O data/tabula-muris-senis-bbknn-processed-official-annotations.h5ad
-wget --content-disposition https://ndownloader.figshare.com/files/23937842 \
-     -O data/tabula-muris-senis-facs-processed-official-annotations.h5ad
+sh 00dl_tabula_muris.sh
 ```
 
 `00info.py` は figshare の article メタデータを表示する補助スクリプトです。
 
+TSPは`00dl_tabula_sapiens.py`経由でダウンロード推奨，ただし環境が固定されるので
+```
+conda create -n cellxgene python=3.12
+conda activate cellxgene
+pip install cellxgene-census
+python 00dl_tabula_sapiens.py
+```
+
+Note: `00dl_tabula_sapiens.sh`は念のため残しているが，ダウンロードされるファイルは異なるため，属性の違いで動作しないので注意
+
+
 ---
 
-## パイプライン全体像
+## config.yaml による実行（転置なし）
+
+TMS と TSP の設定例をそれぞれ用意しています。
+
+```sh
+python pipeline.py --config config_tms.yaml
+python pipeline.py --config config_tsp.yaml
+```
+
+実行せず設定とコマンドだけを確認する場合:
+
+```sh
+python pipeline.py --config config_tms.yaml --dry-run
+python pipeline.py --config config_tsp.yaml --dry-run
+```
+
+個別CLIを順番に呼ぶ転置なしのシェル例もあります。
+
+```sh
+./bootstrap_tms.sh             # TMS BBKNN
+./bootstrap_tsp.sh             # TSP Smart-seq (target: ss)
+./bootstrap_tsp10x.sh          # TSP 10x (target: 10x)
+```
+
+ブラウザで設定・実行・ログ確認を行う場合は、対象configを指定してサーバを起動します。
+
+```sh
+python server.py --config config_tms.yaml
+python server.py --config config_tsp.yaml --port 8001
+```
+
+Webコンソールでは次の操作が可能です。
+
+- config の編集・検証と実行計画の確認
+- パイプラインの開始・停止と段階別の進捗追跡
+- タイムスタンプ付き実行ログのリアルタイム表示・ダウンロード
+- 過去実行の設定スナップショット、状態、所要時間、ログの確認
+- 出力ファイルの一覧表示、絞り込み、ダウンロード
+- 結果ファイルを残したまま実行履歴だけを削除
+
+実行履歴は既定で `.pipeline-runs/<run-id>/` に保存されます。各ディレクトリには
+`config.yaml`, `pipeline.log`, `events.jsonl`, `metadata.json`, `results.json` が入り、
+生成された大容量結果はコピーせず元の出力先を参照します。保存場所は
+`--runs-dir` で変更できます。
+
+```sh
+python server.py --config config_tms.yaml --runs-dir /path/to/run-history
+```
+
+## 個別CLIのパイプライン全体像
+
+
+configランナーは転置を行わず、`01 preprocess → 02 aggregate → 04 row merge → 05 discretize → 06 prepare` の順で処理します。
+
+---
 
 > **`--target <name>` 共通オプション (steps 02–06)**
-> パイプライン 02 以降のスクリプトは `--target` で `data0?_<target>_...` の `<target>` スロットを切り替えられます。既定値は `bbknn` で、`facs` / `tps` / `droplet` あるいは任意の名前を渡せば、対応する `data01_<target>/` を入力として下流のディレクトリ名にも `<target>` が伝播します。例えば `--target facs` を指定すると、以降のステップは `data01_facs/`, `data02_facs_r_tissue/`, `data03_facs_r_tissue_t/`, `data04_facs_r_batch_disc/` のように動作します。
+> パイプライン 02 以降のスクリプトは `--target` で `data0?_<target>_...` の `<target>` スロットを切り替えられます。既定値は `bbknn` で、`facs` / `droplet` / `ss` / `10x` あるいは任意の名前を渡せば、対応する `data01_<target>/` を入力として下流のディレクトリ名にも `<target>` が伝播します。例えば `--target ss` を指定すると、以降のステップは `data01_ss/`, `data02_ss_r_tissue/`, `data03_ss_r_tissue/`, `data04_ss_r_tissue_disc/` のように動作します。
 
 ```
                         h5ad
                           │
                           ▼
-                  01preprocess.py
+            01preprocess_tms.py / 01preprocess_tsp.py
                           │
               per-tissue (cells×genes)  ─── data01_<target>/
                           │
@@ -96,13 +158,15 @@ wget --content-disposition https://ndownloader.figshare.com/files/23937842 \
 
 ---
 
-## 1. Preprocess — `01preprocess.py`
+## 1. Preprocess — `01preprocess_tms.py` / `01preprocess_tsp.py`
 
 `data/*.h5ad` から「臓器ごとの (cell × highly variable gene)」行列を書き出します。
 1 行目はサンプル ID `tissue|age|batch|cell_id` (FACS / droplet では `batch` 抜き)。
 
 ```sh
-python 01preprocess.py --mode bbknn
+python 01preprocess_tms.py --mode bbknn
+python 01preprocess_tsp.py --mode smartseq  # data01_ss/
+python 01preprocess_tsp.py --mode 10x       # data01_10x/
 ```
 
 **入力例:** `data/tabula-muris-senis-bbknn-processed-official-annotations.h5ad` (AnnData, ~23 万 cells × ~22k genes)
@@ -139,7 +203,8 @@ python 02resample.py --level tissue -n 10                # bbknn (既定): data0
 python 02resample.py --level age    -n 10
 python 02resample.py --level batch  -n 10                # 離散化系バックエンド向け
 python 02resample.py --target facs --level tissue -n 10  # FACS 用: data01_facs/ → data02_facs_r_tissue/
-python 02resample.py --target tps  --level tissue -n 10  # TPS 用:  data01_tps/  → data02_tps_r_tissue/
+python 02resample.py --target ss  --level tissue -n 10   # TSP Smart-seq: data01_ss/ → data02_ss_r_tissue/
+python 02resample.py --target 10x --level tissue -n 10   # TSP 10x: data01_10x/ → data02_10x_r_tissue/
 ```
 
 **出力例 (`--level tissue`, `-n 2`):** `data02_bbknn_r_tissue/Aorta.txt`
@@ -190,7 +255,8 @@ python 02pseudo_bulk.py --level tissue                   # bbknn (既定)
 python 02pseudo_bulk.py --level age
 python 02pseudo_bulk.py --level batch
 python 02pseudo_bulk.py --target facs --level tissue     # FACS 用
-python 02pseudo_bulk.py --target tps  --level tissue     # TPS 用
+python 02pseudo_bulk.py --target ss  --level tissue     # TSP Smart-seq
+python 02pseudo_bulk.py --target 10x --level tissue     # TSP 10x
 ```
 
 **出力例 (`--level tissue`):** `data02_bbknn_p_tissue/Aorta.txt` (1 行)
@@ -545,7 +611,7 @@ sh AD/run.sh
 
 ## ディレクトリ早見表
 
-命名規則: `<T>` ∈ {`bbknn` (既定), `facs`, `tps`, `droplet`, …} (= `--target`)、`<src>` ∈ {`r` (resample), `p` (pseudo_bulk)}、`<L>` ∈ {`tissue`, `age`, `batch`}。
+命名規則: `<T>` ∈ {`bbknn` (既定), `facs`, `droplet`, `ss`, `10x`, …} (= `--target`)、`<src>` ∈ {`r` (resample), `p` (pseudo_bulk)}、`<L>` ∈ {`tissue`, `age`, `batch`}。
 
 | ディレクトリ                        | 内容                                                    |
 | ----------------------------------- | ------------------------------------------------------- |

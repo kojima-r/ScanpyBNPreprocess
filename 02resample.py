@@ -16,7 +16,7 @@ form the stratification key):
 
 --target controls the dataset slot in default I/O paths
 (data01_<target>/  ->  data02_<target>_r_<level>/). Defaults to bbknn;
-pass facs / tps / droplet (or any custom name) to switch pipelines.
+pass facs / tsp / droplet (or any custom name) to switch pipelines.
 """
 
 import argparse

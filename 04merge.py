@@ -18,7 +18,7 @@ directory naming stays consistent with steps 02 and 03:
   default:      data02_<target>_<source>_<level>/    →  data03_<target>_<source>_<level>/all.txt
   --transposed: data02_<target>_<source>_<level>_t/  →  data03_<target>_<source>_<level>_t/all.txt
 
---target defaults to bbknn; pass facs / tps / droplet (or any custom
+--target defaults to bbknn; pass facs / tsp / droplet (or any custom
 name) to switch pipelines. Pass --input-glob / --out to override.
 """
 

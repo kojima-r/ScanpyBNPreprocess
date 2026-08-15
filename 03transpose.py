@@ -8,7 +8,7 @@ directory naming stays consistent with steps 02 and 04+:
 
   data02_<target>_<source>_<level>/    →   data02_<target>_<source>_<level>_t/
 
---target defaults to bbknn; pass facs / tps / droplet (or any custom
+--target defaults to bbknn; pass facs / tsp / droplet (or any custom
 name) to switch pipelines. Pass --input-glob / --out-dir to override.
 """
 
